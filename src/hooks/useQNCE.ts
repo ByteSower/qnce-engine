@@ -140,22 +140,14 @@ export function useQNCE(initialNodeId: string = 'start') {
     setHistory(h => [...h, choice.nextNodeId]);
     if (choice.flagEffects) {
       setFlags(prev => ({ ...prev, ...choice.flagEffects }));
-      console.log('[QNCE] Flag effects applied:', choice.flagEffects);
     }
-    console.log('[QNCE] Choice selected:', choice.text, '->', choice.nextNodeId);
   }
 
   function resetNarrative() {
     setCurrentNodeId(initialNodeId);
     setFlags({});
     setHistory([initialNodeId]);
-    console.log('[QNCE] Narrative reset');
   }
-
-  // Debug logs
-  console.log('[QNCE] Current node:', currentNodeId, currentNode.text);
-  console.log('[QNCE] Flags:', flags);
-  console.log('[QNCE] History:', history);
 
   return {
     currentNode,

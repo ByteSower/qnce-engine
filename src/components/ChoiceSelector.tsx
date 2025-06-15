@@ -7,11 +7,11 @@ interface ChoiceSelectorProps {
 }
 
 const ChoiceSelector: React.FC<ChoiceSelectorProps> = ({ choices, onSelect }) => (
-  <div className="flex flex-col gap-2 mt-2">
+  <div className="flex flex-col gap-3 mt-4 items-center w-full">
     {choices.map((choice, idx) => (
       <button
         key={idx}
-        className="bg-blue-600 text-white rounded-lg px-4 py-2 font-semibold shadow hover:bg-blue-700 focus:bg-blue-800 focus:outline-none focus:ring-2 focus:ring-blue-300 transition-all duration-200 w-full"
+        className="bg-blue-500 hover:bg-blue-600 text-white rounded-lg shadow-md px-4 py-2 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-blue-400 w-full max-w-md text-lg font-semibold"
         onClick={() => onSelect(choice)}
         tabIndex={0}
       >

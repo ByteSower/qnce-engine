@@ -47,12 +47,8 @@ This demo showcases these features in a simple, visual format for onboarding, fe
 
 ---
 
-## Contributing
-We welcome feedback and collaboration!
-- **Ideas:** Add more narrative nodes, complex outcomes, or integrate with a text RPG.
-- **Testing:** Try different paths and flag combinations.
-- **Improvements:** Suggest UI/UX tweaks, accessibility, or new features.
-- **Versioning:** This release is **v0.1.0**. See commit history for details.
+## Feedback & Contributions
+We welcome your thoughts and bug reports! Please use our [GitHub Issues page](https://github.com/ByteSower/qnce-demo/issues/new) to let us know how we can improve QNCE.
 
 ---
 

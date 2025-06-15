@@ -13,8 +13,8 @@ const NarrativeDisplay: React.FC<NarrativeDisplayProps> = ({ text }) => {
   }, [text]);
 
   return (
-    <div className={`bg-white text-gray-900 rounded-lg shadow p-6 mb-4 min-h-[120px] transition-opacity duration-500 ${visible ? 'opacity-100' : 'opacity-0'}`}>
-      <p className="text-lg leading-relaxed font-medium">{text}</p>
+    <div className={`max-h-96 overflow-y-auto px-2 py-2 bg-white/90 text-gray-900 rounded-lg shadow mb-6 transition-opacity duration-500 ${visible ? 'opacity-100' : 'opacity-0'}`}>
+      <p className="text-sm sm:text-base md:text-lg leading-normal text-center font-semibold px-4">{text}</p>
     </div>
   );
 };
