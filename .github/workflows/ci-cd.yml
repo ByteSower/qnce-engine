@@ -140,10 +140,5 @@ jobs:
           ```bash
           npm install qnce-engine@${{ steps.package-version.outputs.version }}
           ```
-          
-          ## Team Contributions
-          🧠 **Brain (Architecture):** [Architecture improvements]
-          🎯 **ByteSower (Product):** [Product enhancements]  
-          ⚡ **Body (Development):** [Implementation updates]
         draft: false
         prerelease: false
