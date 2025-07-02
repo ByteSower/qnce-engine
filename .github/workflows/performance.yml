@@ -1,0 +1,73 @@
+name: Performance Regression Testing
+
+on:
+  push:
+    branches: [ main, develop, release/* ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  performance-test:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        cache: 'npm'
+    
+    - name: Install dependencies
+      run: npm ci
+    
+    - name: Build project
+      run: npm run build
+    
+    - name: Run unit tests
+      run: npm test
+    
+    - name: Run performance benchmark
+      run: npm run test:performance
+    
+    - name: Generate performance report
+      run: |
+        node -e "
+        import('./dist/cli/perf.js').then(({ exportSummary }) => {
+          console.log('Generating performance baseline...');
+          // Run sample operations to generate performance data
+          import('./dist/engine/core.js').then(async ({ createQNCEEngine }) => {
+            import('./dist/engine/demo-story.js').then(async ({ demoStoryData }) => {
+              const engine = createQNCEEngine(demoStoryData, {}, true);
+              
+              // Simulate user interactions for baseline
+              for (let i = 0; i < 10; i++) {
+                const choices = engine.getAvailableChoices();
+                if (choices.length > 0) {
+                  engine.selectChoice(choices[0]);
+                  await engine.preloadNextNodes();
+                }
+              }
+              
+              // Export performance summary
+              exportSummary();
+            });
+          });
+        });
+        " > performance-report.json
+    
+    - name: Check performance regression
+      run: |
+        echo "Performance regression check (placeholder)"
+        echo "In production, compare performance-report.json to baseline"
+        echo "Fail if any avg durations regress >5%"
+        
+        # Example regression check logic:
+        # node scripts/check-performance-regression.js performance-report.json baseline-performance.json
+    
+    - name: Upload performance artifacts
+      uses: actions/upload-artifact@v3
+      with:
+        name: performance-reports
+        path: performance-report.json

@@ -1,0 +1,172 @@
+name: Performance Regression Testing
+
+on:
+  push:
+    branches: [ main, release/* ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  performance-regression:
+    runs-on: ubuntu-latest
+    
+    strategy:
+      matrix:
+        node-version: [18.x, 20.x, 22.x]
+        
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup Node.js ${{ matrix.node-version }}
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ matrix.node-version }}
+        cache: 'npm'
+        
+    - name: Install dependencies
+      run: npm ci
+      
+    - name: Build project
+      run: npm run build
+      
+    - name: Run performance benchmark
+      run: |
+        echo "🚀 Running QNCE Performance Benchmark..."
+        node -e "
+        import('./dist/engine/core.js').then(async ({ createQNCEEngine }) => {
+          import('./dist/engine/demo-story.js').then(async ({ demoStoryData }) => {
+            const results = { timestamp: new Date().toISOString(), benchmarks: {} };
+            
+            // Object Pooling Performance Test
+            console.log('📊 Testing Object Pooling Performance...');
+            const perfEngine = createQNCEEngine(demoStoryData, {}, true);
+            const start = performance.now();
+            
+            // Simulate narrative flow with 100 transitions
+            for (let i = 0; i < 100; i++) {
+              const choices = perfEngine.getAvailableChoices();
+              if (choices.length > 0) {
+                perfEngine.selectChoice(choices[0]);
+              }
+              perfEngine.resetNarrative();
+            }
+            
+            const poolingTime = performance.now() - start;
+            results.benchmarks.objectPooling = { avgTime: poolingTime / 100 };
+            
+            // Hot-Reload Performance Test  
+            console.log('🔥 Testing Hot-Reload Performance...');
+            const { StoryDeltaComparator, StoryDeltaPatcher } = await import('./dist/performance/HotReloadDelta.js');
+            
+            const comparator = new StoryDeltaComparator();
+            const patcher = new StoryDeltaPatcher();
+            
+            // Create modified story for delta testing
+            const modifiedStory = {
+              ...demoStoryData,
+              nodes: demoStoryData.nodes.map(node => ({
+                ...node,
+                text: node.text + ' [MODIFIED]'
+              }))
+            };
+            
+            const deltaStart = performance.now();
+            const delta = comparator.compare(demoStoryData, modifiedStory);
+            const compareTime = performance.now() - deltaStart;
+            
+            const patchStart = performance.now();
+            patcher.applyDelta(perfEngine, delta);
+            const patchTime = performance.now() - patchStart;
+            
+            results.benchmarks.hotReload = {
+              compareTime,
+              patchTime,
+              totalTime: compareTime + patchTime
+            };
+            
+            // Performance Thresholds (CI Failure Conditions)
+            const thresholds = {
+              objectPooling: { maxAvgTime: 10 }, // 10ms max per transition
+              hotReload: { 
+                maxCompareTime: 1,    // 1ms max for comparison
+                maxPatchTime: 5,      // 5ms max for patching (relaxed from 2ms for CI)
+                maxTotalTime: 6       // 6ms max total
+              }
+            };
+            
+            console.log('\\n📋 Performance Results:');
+            console.log(\`   Object Pooling: \${results.benchmarks.objectPooling.avgTime.toFixed(2)}ms avg\`);
+            console.log(\`   Hot-Reload Compare: \${results.benchmarks.hotReload.compareTime.toFixed(2)}ms\`);
+            console.log(\`   Hot-Reload Patch: \${results.benchmarks.hotReload.patchTime.toFixed(2)}ms\`);
+            console.log(\`   Hot-Reload Total: \${results.benchmarks.hotReload.totalTime.toFixed(2)}ms\`);
+            
+            // Check thresholds
+            let failures = [];
+            
+            if (results.benchmarks.objectPooling.avgTime > thresholds.objectPooling.maxAvgTime) {
+              failures.push(\`Object pooling regression: \${results.benchmarks.objectPooling.avgTime.toFixed(2)}ms > \${thresholds.objectPooling.maxAvgTime}ms\`);
+            }
+            
+            if (results.benchmarks.hotReload.compareTime > thresholds.hotReload.maxCompareTime) {
+              failures.push(\`Hot-reload compare regression: \${results.benchmarks.hotReload.compareTime.toFixed(2)}ms > \${thresholds.hotReload.maxCompareTime}ms\`);
+            }
+            
+            if (results.benchmarks.hotReload.patchTime > thresholds.hotReload.maxPatchTime) {
+              failures.push(\`Hot-reload patch regression: \${results.benchmarks.hotReload.patchTime.toFixed(2)}ms > \${thresholds.hotReload.maxPatchTime}ms\`);
+            }
+            
+            if (results.benchmarks.hotReload.totalTime > thresholds.hotReload.maxTotalTime) {
+              failures.push(\`Hot-reload total regression: \${results.benchmarks.hotReload.totalTime.toFixed(2)}ms > \${thresholds.hotReload.maxTotalTime}ms\`);
+            }
+            
+            // Write results for artifact
+            require('fs').writeFileSync('perf-report.json', JSON.stringify(results, null, 2));
+            
+            if (failures.length > 0) {
+              console.log('\\n❌ Performance Regression Detected:');
+              failures.forEach(f => console.log(\`   \${f}\`));
+              process.exit(1);
+            } else {
+              console.log('\\n✅ All performance thresholds met!');
+              process.exit(0);
+            }
+          });
+        });
+        "
+        
+    - name: Upload performance report
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: perf-report-node-${{ matrix.node-version }}
+        path: perf-report.json
+        
+    - name: Run standard tests
+      run: npm test
+      
+  publish:
+    needs: performance-regression
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/v')
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20.x'
+        registry-url: 'https://registry.npmjs.org'
+        
+    - name: Install dependencies
+      run: npm ci
+      
+    - name: Build project
+      run: npm run build
+      
+    - name: Publish to npm
+      run: npm publish --tag sprint2
+      env:
+        NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}

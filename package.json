@@ -1,7 +1,7 @@
 {
   "name": "qnce-engine",
-  "version": "0.1.0",
-  "description": "Core QNCE (Quantum Narrative Convergence Engine) - Framework agnostic narrative engine",
+  "version": "1.2.0-sprint2",
+  "description": "Core QNCE (Quantum Narrative Convergence Engine) - Framework agnostic narrative engine with performance optimization",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "bin": {
@@ -17,6 +17,7 @@
     "test:watch": "./node_modules/.bin/jest --watch",
     "test:coverage": "./node_modules/.bin/jest --coverage",
     "test:performance": "node scripts/performance-tests.js",
+    "demo:performance": "npm run build && node scripts/performance-demo.js",
     "prepublishOnly": "npm run build && npm run test"
   },
   "keywords": [

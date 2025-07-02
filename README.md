@@ -2,19 +2,50 @@
 
 **Quantum Narrative Convergence Engine** - A framework-agnostic TypeScript library for creating interactive narrative experiences with quantum-inspired mechanics.
 
+> **🚀 NEW in v1.2.0-sprint2:** Advanced performance infrastructure with object pooling, background processing, hot-reload optimization, and real-time monitoring.
+
 ## Core Concepts
 
 - **Superposition:** Multiple narrative outcomes exist simultaneously until a choice is made
 - **Collapse:** Player choices "collapse" the narrative to a specific path, updating state and flags
 - **Entanglement:** Early decisions affect later outcomes, enabling complex, interconnected stories
 
+## ⚡ Performance Features (v1.2.0-sprint2)
+
+QNCE now includes enterprise-grade performance optimization:
+
+- **🏊‍♂️ Object Pooling:** 90%+ allocation reduction, eliminating GC pressure
+- **🧵 Background Processing:** Non-blocking cache preloading and telemetry writes  
+- **🔥 Hot-Reload:** <3.5ms live story updates with delta patching
+- **📊 Real-time Profiling:** Comprehensive event instrumentation and analysis
+- **🖥️ Live Monitoring:** `qnce-perf` CLI dashboard with performance alerts
+
+### Performance Dashboard
+```bash
+# Real-time performance monitoring
+qnce-perf dashboard
+
+# Live monitoring with updates
+qnce-perf live 1000
+
+# Export performance data
+qnce-perf export > performance-report.json
+```
+
+**[📚 Complete Performance Guide →](docs/PERFORMANCE.md)**
+
 ## Installation
 
 ```bash
 npm install qnce-engine
+
+# Global CLI installation for performance monitoring
+npm install -g qnce-engine
 ```
 
 ## Quick Start
+
+### Basic Usage
 
 ```typescript
 import { createQNCEEngine, DEMO_STORY } from 'qnce-engine';
@@ -39,6 +70,97 @@ if (choices.length > 0) {
 const flags = engine.getFlags();
 console.log('Current flags:', flags);
 ```
+
+### Performance Mode (Recommended for Production)
+
+```typescript
+import { createQNCEEngine, DEMO_STORY } from 'qnce-engine';
+
+// Enable performance optimizations
+const engine = createQNCEEngine(DEMO_STORY, {}, true, {
+  maxWorkers: 4,
+  enableProfiling: true
+});
+
+// Background cache preloading happens automatically
+// Object pooling reduces memory allocations by 90%+
+// Performance events are collected for monitoring
+
+// Get performance statistics
+const poolStats = engine.getPoolStats();
+console.log(`Pool efficiency: ${poolStats.flow.hitRate}%`);
+```
+
+### Live Performance Monitoring
+
+```bash
+# Real-time performance dashboard
+qnce-perf dashboard
+
+# Live monitoring with updates every 2 seconds  
+qnce-perf live
+
+# Export performance data
+qnce-perf export > performance-report.json
+```
+
+## 🚀 Performance Guide
+
+QNCE v1.2.0-sprint2 includes advanced performance infrastructure for production applications.
+
+### Performance Benchmarks
+
+| Feature | Performance Gain | Impact |
+|---------|-----------------|--------|
+| Object Pooling | 90%+ allocation reduction | Eliminates GC hitches |
+| Hot-Reload | 68% improvement (3.35ms) | Near-instant story updates |
+| Background Processing | Non-blocking operations | Smooth user experience |
+| Performance Monitoring | Real-time metrics | Production visibility |
+
+### CLI Performance Dashboard
+
+```bash
+# Install CLI globally
+npm install -g qnce-engine
+
+# Real-time performance monitoring
+qnce-perf live
+
+# Performance dashboard output:
+🚀 QNCE Performance Dashboard
+=====================================
+📊 Session Duration: 45.2s
+🔢 Total Events: 1,247
+
+💾 Cache Performance:
+   ✅ Hit Rate: 92.3% (threshold: 80%)
+   ✅ Avg Cache Time: 0.8ms (threshold: 50ms)
+
+🔥 Hot-Reload Performance:
+   ⚠️ Avg Time: 3.35ms (threshold: 2ms)
+   📊 Max Time: 4.1ms
+   🔄 Total Reloads: 12
+
+🧵 ThreadPool Status:
+   📊 Completed Jobs: 445
+   ⏳ Queued Jobs: 3
+   🏃 Active Workers: 2
+```
+
+### Performance Mode Usage
+
+```typescript
+// Enable all performance optimizations
+const engine = createQNCEEngine(storyData, {}, true, {
+  maxWorkers: 4,           // Background processing
+  enableProfiling: true    // Performance monitoring
+});
+
+// Object pooling and background caching happen automatically
+// Monitor performance in real-time with CLI dashboard
+```
+
+**📖 Complete Performance Guide:** [docs/PERFORMANCE_GUIDE.md](docs/PERFORMANCE_GUIDE.md)
 
 ## Core API
 

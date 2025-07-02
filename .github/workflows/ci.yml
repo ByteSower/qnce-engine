@@ -1,0 +1,80 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [ main, release/* ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    
+    strategy:
+      matrix:
+        node-version: [18.x, 20.x, 22.x]
+        
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup Node.js ${{ matrix.node-version }}
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ matrix.node-version }}
+        cache: 'npm'
+        
+    - name: Install dependencies
+      run: npm ci
+      
+    - name: Run linter
+      run: npm run lint
+      
+    - name: Build project
+      run: npm run build
+      
+    - name: Run tests
+      run: npm test
+      
+    - name: Run test coverage
+      run: npm run test:coverage
+      
+    - name: Upload coverage reports
+      uses: codecov/codecov-action@v3
+      if: matrix.node-version == '20.x'
+      
+  build-validation:
+    runs-on: ubuntu-latest
+    needs: test
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20.x'
+        cache: 'npm'
+        
+    - name: Install dependencies
+      run: npm ci
+      
+    - name: Build project
+      run: npm run build
+      
+    - name: Validate build artifacts
+      run: |
+        echo "🔍 Validating build artifacts..."
+        test -f dist/index.js || (echo "❌ Missing dist/index.js" && exit 1)
+        test -f dist/index.d.ts || (echo "❌ Missing dist/index.d.ts" && exit 1)
+        test -f dist/cli/perf.js || (echo "❌ Missing dist/cli/perf.js" && exit 1)
+        test -f dist/engine/core.js || (echo "❌ Missing dist/engine/core.js" && exit 1)
+        test -f dist/performance/ObjectPool.js || (echo "❌ Missing dist/performance/ObjectPool.js" && exit 1)
+        echo "✅ All build artifacts present"
+        
+    - name: Test CLI commands
+      run: |
+        echo "🧪 Testing CLI commands..."
+        node dist/cli/perf.js help > /dev/null || (echo "❌ CLI help failed" && exit 1)
+        echo "✅ CLI commands working"
