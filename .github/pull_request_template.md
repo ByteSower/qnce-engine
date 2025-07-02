@@ -1,23 +1,31 @@
-# QNCE Engine - Pull Request
+# Pull Request
 
-## 📋 Change Summary
+## � Description
+Brief description of what this PR does.
 
-**Type of Change:**
-- [ ] 🐛 Bug fix
-- [ ] ✨ New feature
-- [ ] 🚀 Performance improvement
+Fixes #(issue)
+
+## 🎯 Type of Change
+- [ ] 🐛 Bug fix (non-breaking change which fixes an issue)
+- [ ] ✨ New feature (non-breaking change which adds functionality)
+- [ ] � Breaking change (fix or feature that would cause existing functionality to not work as expected)
 - [ ] 📚 Documentation update
-- [ ] 🔧 Technical improvement
-- [ ] 🎨 UI/UX improvement
-
-**Description:**
-[Provide a clear description of what was changed and why]
+- [ ] ⚡ Performance improvement
+- [ ] 🧪 Test coverage improvement
+- [ ] 🔧 Refactoring (no functional changes)
 
 ## 🧪 Testing
+- [ ] Tests pass locally with my changes
+- [ ] I have added tests that prove my fix is effective or that my feature works
+- [ ] New and existing unit tests pass locally with my changes
+- [ ] I have tested this change in a real application
 
-**Test Environment:**
-- [ ] Unit tests pass
-- [ ] Integration tests pass
+### 🔬 Test Coverage
+- [ ] Core engine functionality
+- [ ] Branching system (if applicable)
+- [ ] Performance impact (if applicable)
+- [ ] CLI tools (if applicable)
+- [ ] Framework integrations (if applicable)
 - [ ] Manual testing completed
 - [ ] Performance benchmarks met
 

@@ -1,0 +1,14 @@
+blank_issues_enabled: false
+contact_links:
+  - name: 📚 Documentation
+    url: https://github.com/ByteSower/qnce-engine/blob/main/README.md
+    about: Check the documentation for usage examples and API reference
+  - name: 💬 Discussions
+    url: https://github.com/ByteSower/qnce-engine/discussions
+    about: Ask questions, share ideas, and discuss with the community
+  - name: 🎓 Examples
+    url: https://github.com/ByteSower/qnce-engine/tree/main/examples
+    about: Browse working examples for different use cases
+  - name: ⚡ Performance Guide
+    url: https://github.com/ByteSower/qnce-engine/blob/main/docs/PERFORMANCE.md
+    about: Learn about performance optimization and monitoring
