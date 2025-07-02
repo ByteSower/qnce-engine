@@ -1,0 +1,48 @@
+{
+  "timestamp": "2025-07-02T05:45:30.219Z",
+  "config": {
+    "iterations": 1000,
+    "flows": 5,
+    "targets": {
+      "flowSwitchLatency": 20,
+      "stateTransitionTime": 5,
+      "cacheHitRate": 95,
+      "memoryFootprint": 50,
+      "errorRate": 0
+    }
+  },
+  "results": {
+    "flowSwitchLatency": {
+      "average": 0.0006106729999999772,
+      "max": 0.079542,
+      "target": 20,
+      "passed": true
+    },
+    "stateTransitionTime": {
+      "average": 0.0003832137049942513,
+      "max": 0.011584000000002703,
+      "target": 5,
+      "passed": true
+    },
+    "cacheHitRate": {
+      "percentage": 99.7005988023952,
+      "hits": 999,
+      "misses": 3,
+      "target": 95,
+      "passed": true
+    },
+    "memoryFootprint": {
+      "peak": 5.004646301269531,
+      "average": 4.883729480561756,
+      "target": 50,
+      "passed": true
+    },
+    "errorRate": {
+      "total": 0,
+      "per1000Calls": 0,
+      "target": 0,
+      "passed": true
+    }
+  },
+  "overallPassed": true
+}
