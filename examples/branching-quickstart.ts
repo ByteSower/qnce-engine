@@ -191,7 +191,7 @@ async function demonstrateAIIntegration() {
     aiBranches.forEach((branch, i) => {
       console.log(`  ${i + 1}. "${branch.displayText}" (weight: ${branch.weight})`);
     });
-  } catch (error) {
+  } catch (error: any) {
     console.log(`⚠️ AI generation: ${error.message}`);
   }
 }
@@ -299,7 +299,7 @@ async function runComprehensiveDemo() {
 
     console.log('\n🚀 Sprint #3 Branching API is production ready!');
 
-  } catch (error) {
+  } catch (error: any) {
     console.error('❌ Demo failed:', error.message);
     console.error(error.stack);
   }

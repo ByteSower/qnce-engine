@@ -29,6 +29,18 @@ coverage/
 
 # Performance test results
 performance-results.json
+gc-pooling-results.json
+*-results.json
+benchmark-*.json
+
+# Internal documentation (keep local for development)
+docs/sprint_*/BRAIN_REVIEW_REPORT.md
+docs/sprint_*/BYTESOWER_VALIDATION_REPORT.md
+docs/sprint_*/INTERNAL_*.md
+
+# Development utilities
+test-package.js
+demo-performance.mjs
 
 # ESLint cache
 .eslintcache

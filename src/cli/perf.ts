@@ -255,7 +255,7 @@ Performance Thresholds:
 }
 
 // Run if called directly (ES module compatible)
-const isMainModule = import.meta.url === `file://${process.argv[1]}`;
+const isMainModule = require.main === module;
 if (isMainModule) {
   main();
 }

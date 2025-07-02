@@ -1,6 +1,6 @@
 {
   "name": "qnce-engine",
-  "version": "1.2.0-sprint2",
+  "version": "1.2.0",
   "description": "Core QNCE (Quantum Narrative Convergence Engine) - Framework agnostic narrative engine with performance optimization",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -12,12 +12,14 @@
   "scripts": {
     "build": "tsc",
     "build:watch": "tsc --watch",
+    "build:examples": "tsc examples/**/*.ts --outDir dist --target ES2022 --module ES2022 --moduleResolution Node --strict --esModuleInterop --skipLibCheck --declaration false",
     "lint": "eslint .",
     "test": "./node_modules/.bin/jest",
     "test:watch": "./node_modules/.bin/jest --watch",
     "test:coverage": "./node_modules/.bin/jest --coverage",
     "test:performance": "node scripts/performance-tests.js",
     "demo:performance": "npm run build && node scripts/performance-demo.js",
+    "demo:quickstart": "npm run build && node examples/quickstart-demo.js",
     "prepublishOnly": "npm run build && npm run test"
   },
   "keywords": [
@@ -48,6 +50,8 @@
     "dist/**/*",
     "README.md",
     "LICENSE",
-    "examples/**/*"
+    "examples/**/*",
+    "docs/branching/**/*",
+    "docs/PERFORMANCE.md"
   ]
 }

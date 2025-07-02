@@ -2,7 +2,7 @@
 
 **Quantum Narrative Convergence Engine** - A framework-agnostic TypeScript library for creating interactive narrative experiences with quantum-inspired mechanics.
 
-> **🚀 NEW in v1.2.0-sprint2:** Advanced performance infrastructure with object pooling, background processing, hot-reload optimization, and real-time monitoring.
+> **🚀 NEW in v1.2.0:** Advanced Branching API with AI integration, dynamic content management, and comprehensive analytics. Plus enterprise-grade performance optimization.
 
 ## Core Concepts
 
@@ -10,10 +10,15 @@
 - **Collapse:** Player choices "collapse" the narrative to a specific path, updating state and flags
 - **Entanglement:** Early decisions affect later outcomes, enabling complex, interconnected stories
 
-## ⚡ Performance Features (v1.2.0-sprint2)
+## ✨ Advanced Features (v1.2.0)
 
-QNCE now includes enterprise-grade performance optimization:
+### 🌿 Advanced Branching System
+- **Multi-path narratives** with conditional logic and flag-based branching
+- **AI-driven content generation** for dynamic story expansion
+- **Real-time branch insertion/removal** for live content updates
+- **Comprehensive analytics** for narrative optimization
 
+### ⚡ Performance Infrastructure
 - **🏊‍♂️ Object Pooling:** 90%+ allocation reduction, eliminating GC pressure
 - **🧵 Background Processing:** Non-blocking cache preloading and telemetry writes  
 - **🔥 Hot-Reload:** <3.5ms live story updates with delta patching
@@ -89,6 +94,99 @@ const engine = createQNCEEngine(DEMO_STORY, {}, true, {
 // Get performance statistics
 const poolStats = engine.getPoolStats();
 console.log(`Pool efficiency: ${poolStats.flow.hitRate}%`);
+```
+
+### Live Performance Monitoring
+
+```bash
+# Real-time performance dashboard
+qnce-perf dashboard
+
+# Live monitoring with updates every 2 seconds  
+qnce-perf live
+
+# Export performance data
+qnce-perf export > performance-report.json
+```
+
+## 🌿 Advanced Branching & AI Integration
+
+### Basic Branching
+
+```typescript
+import { createQNCEEngine, createBranchingEngine } from 'qnce-engine';
+
+// Create core engine
+const engine = createQNCEEngine(storyData);
+
+// Enable advanced branching
+const branchingEngine = engine.enableBranching(advancedStoryData);
+
+// Evaluate available branches
+const branches = await branchingEngine.evaluateAvailableBranches();
+console.log(`Available paths: ${branches.length}`);
+
+// Execute a narrative branch
+await branchingEngine.executeBranch(branches[0].id);
+```
+
+### AI-Driven Content Generation
+
+```typescript
+// Set AI context for personalized content
+branchingEngine.setAIContext({
+  playerProfile: {
+    playStyle: 'explorer',
+    preferences: { adventure: 0.8, mystery: 0.6 },
+    historicalChoices: ['brave-path', 'investigate-clue']
+  },
+  narrativeContext: {
+    currentTone: 'mysterious',
+    thematicElements: ['exploration', 'discovery'],
+    plotTension: 0.7
+  }
+});
+
+// Generate AI-enhanced branches
+const aiBranches = await branchingEngine.generateAIBranches(3);
+console.log('AI-generated options:', aiBranches.map(b => b.displayText));
+```
+
+### Dynamic Content Management
+
+```typescript
+// Insert new branch at runtime
+const dynamicBranch = {
+  type: 'insert',
+  branchId: 'special-event',
+  targetLocation: { chapterId: 'main', nodeId: 'crossroads' },
+  payload: {
+    name: 'Special Event',
+    branchOptions: [{
+      id: 'event-choice',
+      displayText: 'Investigate the mysterious sound',
+      flagEffects: { event_discovered: true }
+    }]
+  }
+};
+
+await branchingEngine.insertDynamicBranch(dynamicBranch);
+
+// Remove branch when no longer needed
+await branchingEngine.removeDynamicBranch('special-event');
+```
+
+### Analytics & Monitoring
+
+```typescript
+// Get branching analytics
+const analytics = branchingEngine.getBranchingAnalytics();
+console.log(`Branches traversed: ${analytics.totalBranchesTraversed}`);
+console.log(`Popular choices: ${analytics.mostPopularBranches}`);
+
+// Export comprehensive data
+const exportData = branchingEngine.exportBranchingData();
+// Contains: story structure, session data, player behavior, performance metrics
 ```
 
 ### Live Performance Monitoring
@@ -310,6 +408,34 @@ async function playStory() {
     // Get user input and make choice...
   }
 }
+```
+
+## 📚 Examples & Demos
+
+The repository includes comprehensive examples demonstrating all features:
+
+### 🚀 Quickstart Example
+- **File:** `examples/branching-quickstart.ts`
+- **Features:** Basic branching, AI integration, dynamic operations
+- **Run:** `npm run build && node dist/examples/branching-quickstart.js`
+
+### 🎭 Advanced Demo
+- **File:** `examples/branching-advanced-demo.ts` 
+- **Features:** Complex narrative flows, conditional branching, analytics
+- **Story:** "The Mysterious Library" - Interactive mystery with multiple paths
+
+### 🧪 Validation Scripts
+- **Real-world testing:** `scripts/validation-real-world.ts`
+- **Comprehensive testing:** `scripts/validation-comprehensive.ts`
+
+```bash
+# Run the quickstart example
+npm run build
+node dist/examples/branching-quickstart.js
+
+# Run validation tests
+npm run build
+node dist/scripts/validation-real-world.js
 ```
 
 ## Development
