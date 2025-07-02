@@ -22,3 +22,13 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Test coverage reports
+coverage/
+*.lcov
+
+# Performance test results
+performance-results.json
+
+# ESLint cache
+.eslintcache
