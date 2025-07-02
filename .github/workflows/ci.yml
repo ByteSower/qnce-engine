@@ -36,6 +36,12 @@ jobs:
     - name: Run tests
       run: npm test
       
+    - name: Run Sprint #3 branching tests
+      run: npm run test -- --testPathPattern=branching
+      
+    - name: Validate branching performance
+      run: node scripts/performance-spot-check.js
+      
     - name: Run test coverage
       run: npm run test:coverage
       

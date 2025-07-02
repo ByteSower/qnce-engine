@@ -5,6 +5,10 @@ import { poolManager, PooledFlow, PooledNode } from '../performance/ObjectPool';
 import { getThreadPool, ThreadPoolConfig } from '../performance/ThreadPool';
 import { perf, getPerfReporter } from '../performance/PerfReporter';
 
+// Branching system imports
+import { QNCEBranchingEngine, createBranchingEngine } from '../narrative/branching';
+import { QNCEStory } from '../narrative/branching/models';
+
 // QNCE Data Models
 export interface Choice {
   text: string;
@@ -55,6 +59,7 @@ export class QNCEEngine {
   private activeFlowEvents: FlowEvent[] = [];
   private performanceMode: boolean = false;
   private enableProfiling: boolean = false;
+  private branchingEngine?: QNCEBranchingEngine;
 
   constructor(
     storyData: StoryData, 
@@ -324,6 +329,81 @@ export class QNCEEngine {
     threadPool.submitJob('telemetry-write', telemetryData, 'low').catch(error => {
       console.warn('[QNCE] Telemetry write failed:', error.message);
     });
+  }
+
+  // ================================
+  // Sprint #3: Advanced Branching System Integration
+  // ================================
+
+  /**
+   * Enable advanced branching capabilities for this story
+   * Integrates the QNCE Branching API with the core engine
+   */
+  enableBranching(story: QNCEStory): QNCEBranchingEngine {
+    if (this.branchingEngine) {
+      console.warn('[QNCE] Branching already enabled for this engine instance');
+      return this.branchingEngine;
+    }
+
+    // Create branching engine with current state
+    this.branchingEngine = createBranchingEngine(story, this.state);
+
+    if (this.enableProfiling) {
+      perf.record('custom', {
+        eventType: 'branching-enabled',
+        storyId: story.id,
+        chapterCount: story.chapters.length,
+        performanceMode: this.performanceMode
+      });
+    }
+
+    return this.branchingEngine;
+  }
+
+  /**
+   * Get the branching engine if enabled
+   */
+  getBranchingEngine(): QNCEBranchingEngine | undefined {
+    return this.branchingEngine;
+  }
+
+  /**
+   * Check if branching is enabled
+   */
+  isBranchingEnabled(): boolean {
+    return !!this.branchingEngine;
+  }
+
+  /**
+   * Sync core engine state with branching engine
+   * Call this when core state changes to keep branching engine updated
+   */
+  syncBranchingState(): void {
+    if (this.branchingEngine) {
+      // The branching engine maintains its own state copy
+      // This method could be extended to sync state changes
+      if (this.enableProfiling) {
+        perf.record('custom', {
+          eventType: 'branching-state-synced',
+          currentNodeId: this.state.currentNodeId
+        });
+      }
+    }
+  }
+
+  /**
+   * Disable branching and cleanup resources
+   */
+  disableBranching(): void {
+    if (this.branchingEngine) {
+      this.branchingEngine = undefined;
+      
+      if (this.enableProfiling) {
+        perf.record('custom', {
+          eventType: 'branching-disabled'
+        });
+      }
+    }
   }
   
   /**
