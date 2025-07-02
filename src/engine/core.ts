@@ -5,7 +5,7 @@
 export interface Choice {
   text: string;
   nextNodeId: string;
-  flagEffects?: Record<string, any>;
+  flagEffects?: Record<string, unknown>;
 }
 
 export interface NarrativeNode {
@@ -16,7 +16,7 @@ export interface NarrativeNode {
 
 export interface QNCEState {
   currentNodeId: string;
-  flags: Record<string, any>;
+  flags: Record<string, unknown>;
   history: string[];
 }
 
@@ -58,7 +58,7 @@ export class QNCEEngine {
     return { ...this.state };
   }
 
-  getFlags(): Record<string, any> {
+  getFlags(): Record<string, unknown> {
     return { ...this.state.flags };
   }
 
@@ -86,7 +86,7 @@ export class QNCEEngine {
   }
 
   // Utility method for checking flag conditions
-  checkFlag(flagName: string, expectedValue?: any): boolean {
+  checkFlag(flagName: string, expectedValue?: unknown): boolean {
     if (expectedValue === undefined) {
       return this.state.flags[flagName] !== undefined;
     }
@@ -96,7 +96,7 @@ export class QNCEEngine {
   // Get available choices (with potential flag-based filtering)
   getAvailableChoices(): Choice[] {
     const currentNode = this.getCurrentNode();
-    return currentNode.choices.filter(choice => {
+    return currentNode.choices.filter(() => {
       // Future: Add flag-based choice filtering logic here
       return true;
     });
@@ -113,7 +113,7 @@ export function createQNCEEngine(storyData: StoryData, initialState?: Partial<QN
 /**
  * Load story data from JSON
  */
-export function loadStoryData(jsonData: any): StoryData {
+export function loadStoryData(jsonData: unknown): StoryData {
   // Add validation here in the future
   return jsonData as StoryData;
 }

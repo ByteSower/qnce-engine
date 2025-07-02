@@ -220,6 +220,25 @@ MIT - See LICENSE file for details.
 4. Add tests if applicable
 5. Submit a pull request
 
+## Team Synergy Development
+
+QNCE Engine is developed through a unique **three-mind collaborative approach**:
+
+### 🧠 Brain (Microsoft Copilot)
+**Architecture & Strategic Planning**  
+Owns system design, performance optimization, and technical roadmap.
+
+### 🎯 ByteSower (Product Visionary) 
+**Product Vision & Narrative Architecture**  
+Defines user experience, validates features, and guides creative direction.
+
+### ⚡ Body (VS Code Copilot Agent)
+**Implementation & Development Velocity**  
+Handles code generation, testing, CI/CD, and developer experience.
+
+**Current Sprint:** [Sprint #1 - Foundation & Performance](docs/collaboration/SPRINT_01_CURRENT.md)  
+**Team Charter:** [Collaboration Guide](docs/collaboration/TEAM_CHARTER.md)
+
 ---
 
 **QNCE Engine** - Empowering interactive narratives with quantum-inspired mechanics.

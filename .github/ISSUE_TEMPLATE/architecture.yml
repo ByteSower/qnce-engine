@@ -1,0 +1,82 @@
+name: 🧠 Architecture & Design
+description: Architecture decisions, design docs, and technical planning
+title: "[ARCH] "
+labels: ["architecture", "design", "brain"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ## 🧠 Brain Domain - Architecture & Design
+        Use this template for architectural decisions, system design, and technical planning.
+
+  - type: dropdown
+    id: category
+    attributes:
+      label: Category
+      description: What type of architectural work is this?
+      options:
+        - System Architecture
+        - Performance Design
+        - API Design
+        - Integration Planning
+        - Technical Standards
+        - Design Documentation
+    validations:
+      required: true
+
+  - type: textarea
+    id: overview
+    attributes:
+      label: Overview
+      description: High-level description of the architectural need or decision
+      placeholder: Describe the architectural challenge or opportunity...
+    validations:
+      required: true
+
+  - type: textarea
+    id: requirements
+    attributes:
+      label: Requirements & Constraints
+      description: Technical requirements, performance targets, and constraints
+      placeholder: |
+        - Performance requirements
+        - Scalability needs
+        - Integration constraints
+        - Technical limitations
+    validations:
+      required: true
+
+  - type: textarea
+    id: success_criteria
+    attributes:
+      label: Success Criteria
+      description: How will we measure success for this architectural work?
+      placeholder: |
+        - Performance benchmarks
+        - Code quality metrics
+        - Integration success measures
+    validations:
+      required: true
+
+  - type: dropdown
+    id: priority
+    attributes:
+      label: Priority
+      options:
+        - Critical
+        - High
+        - Medium
+        - Low
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: collaboration
+    attributes:
+      label: Team Collaboration
+      description: Who needs to be involved?
+      options:
+        - label: Requires ByteSower (Product) input
+        - label: Requires Body (Implementation) input
+        - label: Needs community feedback
+        - label: Requires external review

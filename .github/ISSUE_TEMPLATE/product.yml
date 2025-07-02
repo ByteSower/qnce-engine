@@ -1,0 +1,97 @@
+name: 🎯 Product & Narrative
+description: Feature requests, UX improvements, and narrative enhancements
+title: "[PRODUCT] "
+labels: ["product", "narrative", "bytesower"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ## 🎯 ByteSower Domain - Product & Narrative
+        Use this template for feature requests, UX improvements, and narrative enhancements.
+
+  - type: dropdown
+    id: category
+    attributes:
+      label: Category
+      description: What type of product work is this?
+      options:
+        - Feature Request
+        - UX Improvement
+        - Narrative Enhancement
+        - User Story
+        - Play-test Feedback
+        - Community Feature
+    validations:
+      required: true
+
+  - type: textarea
+    id: user_story
+    attributes:
+      label: User Story
+      description: Describe the feature from the user's perspective
+      placeholder: "As a [user type], I want [functionality] so that [benefit]"
+    validations:
+      required: true
+
+  - type: textarea
+    id: narrative_context
+    attributes:
+      label: Narrative Context
+      description: How does this relate to storytelling and narrative flow?
+      placeholder: |
+        - Impact on story creation
+        - Effect on narrative flow
+        - Storyteller experience
+        - Player experience
+    validations:
+      required: false
+
+  - type: textarea
+    id: acceptance_criteria
+    attributes:
+      label: Acceptance Criteria
+      description: What needs to be true for this to be considered complete?
+      placeholder: |
+        - [ ] Criterion 1
+        - [ ] Criterion 2
+        - [ ] Criterion 3
+    validations:
+      required: true
+
+  - type: dropdown
+    id: user_impact
+    attributes:
+      label: User Impact
+      description: How many users would benefit from this?
+      options:
+        - All Users
+        - Most Users
+        - Some Users
+        - Power Users Only
+        - Developers Only
+    validations:
+      required: true
+
+  - type: dropdown
+    id: priority
+    attributes:
+      label: Priority
+      options:
+        - Critical
+        - High
+        - Medium
+        - Low
+    validations:
+      required: true
+
+  - type: textarea
+    id: play_test_data
+    attributes:
+      label: Play-test Data (if applicable)
+      description: Any user feedback or testing data supporting this request
+      placeholder: |
+        - User feedback quotes
+        - Usage analytics
+        - Community discussions
+    validations:
+      required: false
