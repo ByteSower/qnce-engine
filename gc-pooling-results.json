@@ -1,0 +1,62 @@
+{
+  "timestamp": "2025-07-02T06:07:56.938Z",
+  "test": "S2-T1 Object Pooling GC Impact",
+  "iterations": 1000,
+  "withoutPooling": {
+    "time": 2.93675,
+    "memory": {
+      "heapUsed": 20688,
+      "heapTotal": 0,
+      "external": -21958
+    },
+    "objectsCreated": 6000,
+    "gcPressure": 0.0197296142578125
+  },
+  "withPooling": {
+    "time": 13.433375,
+    "memory": {
+      "heapUsed": 153536,
+      "heapTotal": 0,
+      "external": 40020
+    },
+    "poolStats": {
+      "flows": {
+        "poolSize": 1,
+        "maxSize": 50,
+        "created": 1,
+        "borrowed": 6000,
+        "returned": 6000,
+        "inUse": 0,
+        "hitRate": 99.98333333333333
+      },
+      "nodes": {
+        "poolSize": 0,
+        "maxSize": 200,
+        "created": 6000,
+        "borrowed": 6000,
+        "returned": 0,
+        "inUse": 6000,
+        "hitRate": 0
+      },
+      "assets": {
+        "poolSize": 0,
+        "maxSize": 100,
+        "created": 0,
+        "borrowed": 0,
+        "returned": 0,
+        "inUse": 0,
+        "hitRate": 0
+      }
+    },
+    "gcPressure": 0.14642333984375
+  },
+  "improvements": {
+    "gcReduction": -642.1500386697603,
+    "timeReduction": -357.4231718736699
+  },
+  "acceptanceCriteria": {
+    "gcReductionTarget": 50,
+    "gcReductionActual": -642.1500386697603,
+    "passed": false
+  }
+}

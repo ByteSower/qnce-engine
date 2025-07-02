@@ -6,7 +6,8 @@
   "types": "dist/index.d.ts",
   "bin": {
     "qnce-audit": "dist/cli/audit.js",
-    "qnce-init": "dist/cli/init.js"
+    "qnce-init": "dist/cli/init.js",
+    "qnce-perf": "dist/cli/perf.js"
   },
   "scripts": {
     "build": "tsc",
