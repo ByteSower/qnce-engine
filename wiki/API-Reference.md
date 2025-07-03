@@ -96,6 +96,27 @@ choices.forEach((choice, index) => {
 });
 ```
 
+##### goToNodeById()
+
+```typescript
+goToNodeById(nodeId: string): void
+```
+
+Navigates directly to a specific node by its ID. Throws `QNCENavigationError` if the node ID is invalid.
+
+**Parameters:**
+
+- **`nodeId`** (`string`): The ID of the node to navigate to.
+
+**Example:**
+```typescript
+try {
+  engine.goToNodeById('chapter_2_start');
+} catch (error) {
+  console.error(error.message);
+}
+```
+
 ##### makeChoice()
 
 ```typescript
@@ -732,3 +753,271 @@ const engine = createQNCEEngine<TypedFlags, CustomNodeMetadata>(story);
 **← Previous:** [CLI Usage](CLI-Usage) | **You are here:** API Reference | **Next:** [Contributing →](Contributing)
 
 **All Pages:** [Home](Home) • [Getting Started](Getting-Started) • [Branching Guide](Branching-Guide) • [Performance Tuning](Performance-Tuning) • [CLI Usage](CLI-Usage) • **API Reference** • [Contributing](Contributing) • [Release Notes](Release-Notes)
+
+## 🛡️ Choice Validation API
+
+### ChoiceValidator Interface
+
+The `ChoiceValidator` interface defines validation logic for choice execution.
+
+```typescript
+interface ChoiceValidator {
+  validate(choice: Choice, context: ValidationContext): ValidationResult;
+  getAvailableChoices(context: ValidationContext): Choice[];
+  addRule(rule: ValidationRule): void;
+  removeRule(ruleName: string): void;
+  getRules(): ValidationRule[];
+}
+```
+
+### createChoiceValidator()
+
+Creates a new choice validator with default rules.
+
+```typescript
+function createChoiceValidator(): ChoiceValidator
+```
+
+#### Returns
+
+`ChoiceValidator` - A new validator instance with standard validation rules
+
+#### Example
+
+```typescript
+import { createChoiceValidator } from 'qnce-engine';
+
+const validator = createChoiceValidator();
+// Has built-in rules: choice-exists, flag-conditions, choice-enabled, 
+// time-conditions, inventory-conditions
+```
+
+### StandardValidationRules
+
+Built-in validation rules for common scenarios.
+
+```typescript
+class StandardValidationRules {
+  static readonly CHOICE_EXISTS: ValidationRule;
+  static readonly FLAG_CONDITIONS: ValidationRule;
+  static readonly CHOICE_ENABLED: ValidationRule;
+  static readonly TIME_CONDITIONS: ValidationRule;
+  static readonly INVENTORY_CONDITIONS: ValidationRule;
+}
+```
+
+#### Available Rules
+
+- **`CHOICE_EXISTS`** (priority: 1): Validates that choice exists in current node
+- **`FLAG_CONDITIONS`** (priority: 2): Validates flag-based requirements
+- **`CHOICE_ENABLED`** (priority: 3): Validates choice is not disabled
+- **`TIME_CONDITIONS`** (priority: 4): Validates time-based availability
+- **`INVENTORY_CONDITIONS`** (priority: 5): Validates inventory requirements
+
+### ValidationRule Interface
+
+Defines a custom validation rule.
+
+```typescript
+interface ValidationRule {
+  name: string;
+  priority: number; // Lower numbers = higher priority
+  validate(choice: Choice, context: ValidationContext): ValidationResult;
+}
+```
+
+### ValidationContext Interface
+
+Context information passed to validation rules.
+
+```typescript
+interface ValidationContext {
+  currentNode: NarrativeNode;
+  state: QNCEState;
+  availableChoices: Choice[];
+  timestamp?: number;
+  metadata?: Record<string, unknown>;
+}
+```
+
+### ValidationResult Interface
+
+Result returned by validation rules.
+
+```typescript
+interface ValidationResult {
+  isValid: boolean;
+  reason?: string;
+  failedConditions?: string[];
+  suggestedChoices?: Choice[];
+  metadata?: Record<string, unknown>;
+}
+```
+
+### ChoiceValidationError Class
+
+Error thrown when choice validation fails.
+
+```typescript
+class ChoiceValidationError extends QNCEError {
+  choice: Choice;
+  validationResult: ValidationResult;
+  availableChoices?: Choice[];
+  
+  getUserFriendlyMessage(): string;
+  getDebugInfo(): Record<string, unknown>;
+}
+```
+
+#### Methods
+
+- **`getUserFriendlyMessage()`**: Returns a user-friendly error message with suggestions
+- **`getDebugInfo()`**: Returns detailed debugging information for developers
+
+### Enhanced Choice Interface
+
+The `Choice` interface has been extended with validation properties.
+
+```typescript
+interface Choice {
+  text: string;
+  nextNodeId: string;
+  flagEffects?: Record<string, unknown>;
+  
+  // Validation properties
+  flagRequirements?: Record<string, unknown>;
+  timeRequirements?: {
+    minTime?: number;
+    maxTime?: number;
+    availableAfter?: Date;
+    availableBefore?: Date;
+  };
+  inventoryRequirements?: Record<string, number>;
+  enabled?: boolean;
+}
+```
+
+#### New Properties
+
+- **`flagRequirements`**: Required flag values for choice availability
+- **`timeRequirements`**: Time-based availability constraints
+- **`inventoryRequirements`**: Required inventory items and quantities
+- **`enabled`**: Whether choice is enabled (true by default)
+
+### Validation Utility Functions
+
+```typescript
+// Create validation context
+function createValidationContext(
+  currentNode: NarrativeNode,
+  state: QNCEState,
+  availableChoices: Choice[]
+): ValidationContext;
+
+// Check if error is a choice validation error
+function isChoiceValidationError(error: unknown): error is ChoiceValidationError;
+```
+
+### Engine Integration
+
+The QNCE Engine automatically integrates choice validation:
+
+```typescript
+class QNCEEngine {
+  // Validation methods
+  getChoiceValidator(): ChoiceValidator;
+  setChoiceValidator(validator: ChoiceValidator): void;
+  validateChoice(choice: Choice): ValidationResult;
+  
+  // Enhanced methods with validation
+  getAvailableChoices(): Choice[]; // Now uses validator
+  makeChoice(choiceIndex: number): void; // Now validates before execution
+}
+```
+
+#### New Methods
+
+- **`getChoiceValidator()`**: Get the current choice validator
+- **`setChoiceValidator(validator)`**: Set a custom choice validator
+- **`validateChoice(choice)`**: Manually validate a specific choice
+
+### Usage Examples
+
+#### Basic Validation
+
+```typescript
+const engine = createQNCEEngine(storyData);
+
+// makeChoice automatically validates
+try {
+  engine.makeChoice(0);
+} catch (error) {
+  if (isChoiceValidationError(error)) {
+    console.error('Validation failed:', error.message);
+  }
+}
+```
+
+#### Custom Validation Rules
+
+```typescript
+const validator = createChoiceValidator();
+
+validator.addRule({
+  name: 'weather-check',
+  priority: 6,
+  validate: (choice, context) => {
+    if (choice.text.includes('outside') && context.state.flags.weather === 'storm') {
+      return {
+        isValid: false,
+        reason: 'Cannot go outside during a storm!',
+        failedConditions: ['bad-weather']
+      };
+    }
+    return { isValid: true };
+  }
+});
+
+engine.setChoiceValidator(validator);
+```
+
+#### Flag-Based Choices
+
+```typescript
+const restrictedChoice = {
+  text: 'Open secret door',
+  nextNodeId: 'secret_room',
+  flagRequirements: {
+    hasKey: true,
+    discoveredSecret: true,
+    playerLevel: 10
+  }
+};
+```
+
+#### Time-Based Choices
+
+```typescript
+const timedChoice = {
+  text: 'Visit the night market',
+  nextNodeId: 'market',
+  timeRequirements: {
+    availableAfter: new Date('2025-01-01T20:00:00'),
+    availableBefore: new Date('2025-01-01T23:59:59')
+  }
+};
+```
+
+#### Inventory-Based Choices
+
+```typescript
+const expensiveChoice = {
+  text: 'Buy magical armor',
+  nextNodeId: 'shop_armor',
+  inventoryRequirements: {
+    gold: 500,
+    gems: 3,
+    enchantment_tokens: 1
+  }
+};
+```

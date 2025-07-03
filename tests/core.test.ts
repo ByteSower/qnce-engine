@@ -368,6 +368,83 @@ describe('QNCE Engine Core - Sprint #1 Test Scaffolds', () => {
       expect(history).toEqual(['start', 'left', 'secret']);
     });
   });
+
+  // ================================
+  // Sprint 3.1 - API Consistency Tests (AC4)
+  // ================================
+
+  describe('Sprint 3.1: API Consistency Methods', () => {
+    let engine: QNCEEngine;
+    beforeEach(() => {
+      engine = createQNCEEngine(testStory);
+    });
+
+    describe('goToNodeById()', () => {
+      test('should navigate directly to valid node', () => {
+        expect(engine.getCurrentNode().id).toBe('start');
+        
+        const navigationTime = measurePerformance.measureStateTransition(() => {
+          engine.goToNodeById('victory');
+        });
+        
+        expect(navigationTime).toBeLessThanOrEqual(5); // Performance requirement
+        expect(engine.getCurrentNode().id).toBe('victory');
+        
+        const state = engine.getState();
+        expect(state.currentNodeId).toBe('victory');
+        expect(state.history).toEqual(['start', 'victory']);
+      });
+
+      test('should throw QNCENavigationError for invalid node', () => {
+        expect(() => {
+          engine.goToNodeById('invalid-node-id');
+        }).toThrow('Node not found: invalid-node-id');
+      });
+
+      test('should throw QNCENavigationError for empty string node ID', () => {
+        expect(() => {
+          engine.goToNodeById('');
+        }).toThrow("Node not found: ");
+      });
+    });
+
+    describe('getCurrentNode()', () => {
+      test('should return the correct current node object', () => {
+        const node = engine.getCurrentNode();
+        expect(node).toBeDefined();
+        expect(node.id).toBe('start');
+        expect(node.text).toContain('beginning of your adventure');
+      });
+
+      test('should return updated node after navigation', () => {
+        engine.goToNodeById('secret');
+        const node = engine.getCurrentNode();
+        expect(node.id).toBe('secret');
+        expect(node.text).toContain('hidden treasure');
+      });
+    });
+
+    describe('getAvailableChoices()', () => {
+      test('should return available choices for the current node', () => {
+        const choices = engine.getAvailableChoices();
+        expect(choices).toHaveLength(3);
+        expect(choices[0].text).toBe('Go left');
+      });
+
+      test('should return empty array for a node with no choices', () => {
+        engine.goToNodeById('victory');
+        const choices = engine.getAvailableChoices();
+        expect(choices).toHaveLength(0);
+      });
+
+      test('should return updated choices after navigation', () => {
+        engine.goToNodeById('left');
+        const choices = engine.getAvailableChoices();
+        expect(choices).toHaveLength(2);
+        expect(choices[0].text).toBe('Open door');
+      });
+    });
+  });
 });
 
 // Performance Summary Report (moved outside describe block)

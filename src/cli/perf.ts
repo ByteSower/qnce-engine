@@ -16,6 +16,32 @@ interface PerformanceThresholds {
   maxEventBacklog: number; // number of events
 }
 
+interface PerfSummary {
+  totalEvents: number;
+  eventsByType: Record<string, number>;
+  avgDurations: Record<string, number>;
+  maxDurations: Record<string, number>;
+  cacheHitRate: number;
+  hotReloadPerformance: {
+    avgTime: number;
+    maxTime: number;
+    totalReloads: number;
+  };
+  timeRange: {
+    start: number;
+    end: number;
+    duration: number;
+  };
+}
+
+interface ThreadPoolStats {
+  completedJobs: number;
+  queuedJobs: number;
+  activeWorkers: number;
+  avgExecutionTime: number;
+  workerUtilization: number;
+}
+
 const DEFAULT_THRESHOLDS: PerformanceThresholds = {
   maxCacheHitTime: 50, // 50ms max for cache operations
   minCacheHitRate: 80, // 80% minimum cache hit rate
@@ -92,7 +118,7 @@ function displayDashboard(thresholds: PerformanceThresholds = DEFAULT_THRESHOLDS
 /**
  * Display performance threshold alerts
  */
-function displayAlerts(summary: any, thresholds: PerformanceThresholds, threadStats: any): void {
+function displayAlerts(summary: PerfSummary, thresholds: PerformanceThresholds, threadStats: ThreadPoolStats): void {
   console.log('🚨 Performance Alerts:');
   
   const alerts: string[] = [];
@@ -199,10 +225,11 @@ function main(): void {
       break;
       
     case 'live':
-    case 'monitor':
+    case 'monitor': {
       const interval = parseInt(args[1]) || 2000;
       startLiveMonitor(interval);
       break;
+    }
       
     case 'export':
     case 'json':

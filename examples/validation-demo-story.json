@@ -1,0 +1,177 @@
+{
+  "initialNodeId": "entrance",
+  "nodes": [
+    {
+      "id": "entrance",
+      "text": "You stand before an ancient castle. The heavy oak doors are locked, and storm clouds gather overhead.",
+      "choices": [
+        {
+          "text": "Try to force the door open",
+          "nextNodeId": "door_attempt"
+        },
+        {
+          "text": "Use the golden key",
+          "nextNodeId": "unlock_door",
+          "flagRequirements": {
+            "hasGoldenKey": true
+          }
+        },
+        {
+          "text": "Wait outside in the storm",
+          "nextNodeId": "storm_wait",
+          "enabled": false
+        },
+        {
+          "text": "Purchase a lockpick from the merchant",
+          "nextNodeId": "buy_lockpick",
+          "inventoryRequirements": {
+            "gold": 25,
+            "reputation": 5
+          }
+        },
+        {
+          "text": "Visit the tavern (opens at sunset)",
+          "nextNodeId": "tavern",
+          "timeRequirements": {
+            "availableAfter": "2025-01-01T18:00:00.000Z",
+            "availableBefore": "2025-01-01T23:59:59.000Z"
+          }
+        }
+      ]
+    },
+    {
+      "id": "door_attempt",
+      "text": "You push against the heavy doors, but they remain firmly shut. Your shoulder aches from the effort.",
+      "choices": [
+        {
+          "text": "Return to the entrance",
+          "nextNodeId": "entrance"
+        }
+      ]
+    },
+    {
+      "id": "unlock_door",
+      "text": "The golden key turns smoothly in the lock. The doors swing open with a satisfying creak, revealing a grand hallway beyond.",
+      "choices": [
+        {
+          "text": "Enter the castle",
+          "nextNodeId": "grand_hall",
+          "flagEffects": {
+            "enteredCastle": true
+          }
+        }
+      ]
+    },
+    {
+      "id": "storm_wait",
+      "text": "You decide to wait outside, but this choice should never be reachable due to validation.",
+      "choices": []
+    },
+    {
+      "id": "buy_lockpick",
+      "text": "The merchant smiles as you purchase a masterfully crafted lockpick. 'This will open any door,' he promises.",
+      "choices": [
+        {
+          "text": "Return to the entrance with lockpick",
+          "nextNodeId": "entrance",
+          "flagEffects": {
+            "hasLockpick": true
+          }
+        }
+      ]
+    },
+    {
+      "id": "tavern",
+      "text": "The warm tavern glows with candlelight. Travelers share stories and the aroma of roasted meat fills the air.",
+      "choices": [
+        {
+          "text": "Listen to the bard's tale",
+          "nextNodeId": "bard_story"
+        },
+        {
+          "text": "Ask about the castle",
+          "nextNodeId": "castle_info"
+        }
+      ]
+    },
+    {
+      "id": "grand_hall",
+      "text": "You stand in an opulent grand hall with marble columns and tapestries depicting ancient battles.",
+      "choices": [
+        {
+          "text": "Explore the east wing",
+          "nextNodeId": "east_wing"
+        },
+        {
+          "text": "Climb the grand staircase",
+          "nextNodeId": "upper_floor"
+        }
+      ]
+    },
+    {
+      "id": "bard_story",
+      "text": "The bard tells of a legendary treasure hidden deep within the castle, guarded by ancient magic.",
+      "choices": [
+        {
+          "text": "Ask about the treasure",
+          "nextNodeId": "treasure_info",
+          "flagEffects": {
+            "knowsAboutTreasure": true
+          }
+        }
+      ]
+    },
+    {
+      "id": "castle_info",
+      "text": "A grizzled traveler warns you about the castle's dangers but mentions a golden key hidden in the forest.",
+      "choices": [
+        {
+          "text": "Ask where to find the key",
+          "nextNodeId": "key_location",
+          "flagEffects": {
+            "knowsKeyLocation": true
+          }
+        }
+      ]
+    },
+    {
+      "id": "treasure_info",
+      "text": "The bard leans closer and whispers the secret of the treasure's location...",
+      "choices": []
+    },
+    {
+      "id": "key_location",
+      "text": "The traveler draws a rough map on a napkin, marking where the golden key lies buried.",
+      "choices": [
+        {
+          "text": "Search for the key",
+          "nextNodeId": "find_key",
+          "flagEffects": {
+            "hasGoldenKey": true,
+            "foundKey": true
+          }
+        }
+      ]
+    },
+    {
+      "id": "find_key",
+      "text": "After searching through the undergrowth, your fingers close around a cold, golden key. Success!",
+      "choices": [
+        {
+          "text": "Return to the castle",
+          "nextNodeId": "entrance"
+        }
+      ]
+    },
+    {
+      "id": "east_wing",
+      "text": "The east wing is filled with ancient artifacts and dusty paintings.",
+      "choices": []
+    },
+    {
+      "id": "upper_floor",
+      "text": "The upper floor overlooks the grand hall. Moonlight streams through stained glass windows.",
+      "choices": []
+    }
+  ]
+}

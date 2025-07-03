@@ -1,5 +1,14 @@
+import { NarrativeNode, StoryData } from '../engine/core';
+
 // S2-T3: Hot-Reload Delta Patching - Initial Spike
 // Explore delta comparison logic for story content updates
+
+export interface Asset {
+  id: string;
+  type: 'image' | 'audio' | 'video';
+  src: string;
+  size?: number;
+}
 
 export interface StoryDelta {
   nodeChanges: NodeDelta[];
@@ -10,17 +19,26 @@ export interface StoryDelta {
 export interface NodeDelta {
   nodeId: string;
   changeType: 'added' | 'modified' | 'removed';
-  oldNode?: any;
-  newNode?: any;
-  affectedFields: string[];
+  oldNode?: NarrativeNode;
+  newNode?: NarrativeNode;
+  affectedFields: (keyof NarrativeNode | '*')[];
 }
 
 export interface AssetDelta {
   assetId: string;
   changeType: 'added' | 'modified' | 'removed';
-  oldAsset?: any;
-  newAsset?: any;
+  oldAsset?: Asset;
+  newAsset?: Asset;
   sizeChange: number;
+}
+
+interface PatchableEngine {
+  storyData: StoryData;
+  getState(): { currentNodeId: string };
+}
+
+export interface ExtendedStoryData extends StoryData {
+  assets?: Asset[];
 }
 
 /**
@@ -32,7 +50,7 @@ export class StoryDeltaComparator {
   /**
    * Compare two story configurations and generate delta
    */
-  compareStories(oldStory: any, newStory: any): StoryDelta {
+  compareStories(oldStory: ExtendedStoryData, newStory: ExtendedStoryData): StoryDelta {
     const timestamp = performance.now();
     
     return {
@@ -45,7 +63,7 @@ export class StoryDeltaComparator {
   /**
    * Deep comparison of narrative nodes
    */
-  private compareNodes(oldNodes: any[], newNodes: any[]): NodeDelta[] {
+  private compareNodes(oldNodes: NarrativeNode[], newNodes: NarrativeNode[]): NodeDelta[] {
     const deltas: NodeDelta[] = [];
     const oldNodeMap = new Map(oldNodes.map(n => [n.id, n]));
     const newNodeMap = new Map(newNodes.map(n => [n.id, n]));
@@ -95,7 +113,7 @@ export class StoryDeltaComparator {
   /**
    * Compare assets (future: images, audio, etc.)
    */
-  private compareAssets(oldAssets: any[], newAssets: any[]): AssetDelta[] {
+  private compareAssets(oldAssets: Asset[], newAssets: Asset[]): AssetDelta[] {
     const deltas: AssetDelta[] = [];
     const oldAssetMap = new Map(oldAssets.map(a => [a.id, a]));
     const newAssetMap = new Map(newAssets.map(a => [a.id, a]));
@@ -142,9 +160,9 @@ export class StoryDeltaComparator {
   /**
    * Fine-grained field comparison for nodes
    */
-  private findChangedFields(oldNode: any, newNode: any): string[] {
-    const changedFields: string[] = [];
-    const allFields = new Set([...Object.keys(oldNode), ...Object.keys(newNode)]);
+  private findChangedFields(oldNode: NarrativeNode, newNode: NarrativeNode): (keyof NarrativeNode)[] {
+    const changedFields: (keyof NarrativeNode)[] = [];
+    const allFields = new Set([...Object.keys(oldNode), ...Object.keys(newNode)]) as Set<keyof NarrativeNode>;
     
     for (const field of allFields) {
       if (!this.deepEqual(oldNode[field], newNode[field])) {
@@ -158,7 +176,7 @@ export class StoryDeltaComparator {
   /**
    * Asset comparison logic
    */
-  private assetsAreDifferent(oldAsset: any, newAsset: any): boolean {
+  private assetsAreDifferent(oldAsset: Asset, newAsset: Asset): boolean {
     // Simple comparison - in practice, would use checksums/hashes
     return JSON.stringify(oldAsset) !== JSON.stringify(newAsset);
   }
@@ -166,7 +184,7 @@ export class StoryDeltaComparator {
   /**
    * Deep equality check for objects
    */
-  private deepEqual(a: any, b: any): boolean {
+  private deepEqual(a: unknown, b: unknown): boolean {
     if (a === b) return true;
     if (a === null || b === null) return false;
     if (typeof a !== typeof b) return false;
@@ -174,14 +192,14 @@ export class StoryDeltaComparator {
     if (typeof a === 'object') {
       if (Array.isArray(a) !== Array.isArray(b)) return false;
       
-      const keysA = Object.keys(a);
-      const keysB = Object.keys(b);
+      const keysA = Object.keys(a as Record<string, unknown>);
+      const keysB = Object.keys(b as Record<string, unknown>);
       
       if (keysA.length !== keysB.length) return false;
       
       for (const key of keysA) {
         if (!keysB.includes(key)) return false;
-        if (!this.deepEqual(a[key], b[key])) return false;
+        if (!this.deepEqual((a as Record<string, unknown>)[key], (b as Record<string, unknown>)[key])) return false;
       }
       
       return true;
@@ -196,9 +214,9 @@ export class StoryDeltaComparator {
  * Applies story deltas with minimal engine disruption
  */
 export class StoryDeltaPatcher {
-  private engine: any;
+  private engine: PatchableEngine;
   
-  constructor(engine: any) {
+  constructor(engine: PatchableEngine) {
     this.engine = engine;
   }
   
@@ -339,31 +357,29 @@ export class StoryDeltaPatcher {
    */
   private applyNodeChange(change: NodeDelta): void {
     // Access engine's internal story data
-    const storyData = (this.engine as any).storyData;
+    const storyData = this.engine.storyData;
     
     switch (change.changeType) {
-      case 'added':
-        storyData.nodes.push(change.newNode);
+      case 'added': {
+        if (change.newNode) {
+          storyData.nodes.push(change.newNode);
+        }
         break;
+      }
         
-      case 'removed':
-        const removeIndex = storyData.nodes.findIndex((n: any) => n.id === change.nodeId);
+      case 'removed': {
+        const removeIndex = storyData.nodes.findIndex((n: NarrativeNode) => n.id === change.nodeId);
         if (removeIndex >= 0) {
           storyData.nodes.splice(removeIndex, 1);
         }
         break;
+      }
         
       case 'modified':
-        const modifyIndex = storyData.nodes.findIndex((n: any) => n.id === change.nodeId);
-        if (modifyIndex >= 0) {
-          // Only update changed fields for minimal disruption
-          for (const field of change.affectedFields) {
-            if (field === '*') {
-              storyData.nodes[modifyIndex] = change.newNode;
-            } else {
-              storyData.nodes[modifyIndex][field] = change.newNode[field];
-            }
-          }
+        const modifyIndex = storyData.nodes.findIndex((n: NarrativeNode) => n.id === change.nodeId);
+        if (modifyIndex >= 0 && change.newNode) {
+          // For simplicity, always replace the entire node
+          storyData.nodes[modifyIndex] = change.newNode;
         }
         break;
     }
@@ -388,7 +404,7 @@ export interface PatchResult {
 }
 
 // Factory function for creating delta tools
-export function createDeltaTools(engine: any) {
+export function createDeltaTools(engine: PatchableEngine) {
   return {
     comparator: new StoryDeltaComparator(),
     patcher: new StoryDeltaPatcher(engine)

@@ -84,7 +84,7 @@ export class QNCEBranchingEngine {
 
     if (success) {
       // Record branch execution in history
-      this.recordBranchHistory(optionId, option);
+      this.recordBranchHistory(optionId);
       
       // Update analytics
       this.updateBranchAnalytics(optionId);
@@ -362,9 +362,9 @@ export class QNCEBranchingEngine {
     return true;
   }
 
-  private recordBranchHistory(optionId: string, option: BranchOption): void {
+  private recordBranchHistory(optionId: string): void {
     const historyEntry: BranchHistoryEntry = {
-      id: `history-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      id: `history-${Date.now()}`,
       branchPointId: 'unknown', // Would need to track this
       chosenOptionId: optionId,
       timestamp: new Date(),
