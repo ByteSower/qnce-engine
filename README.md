@@ -569,6 +569,7 @@ The main engine class for managing narrative state.
 #### Methods
 
 - `getCurrentNode()`: Get the current narrative node
+- `goToNodeById(nodeId)`: Navigate directly to a node by its ID
 - `getState()`: Get the complete engine state
 - `getFlags()`: Get current narrative flags
 - `getHistory()`: Get choice history
@@ -830,20 +831,26 @@ function MyApp() {
 
 ```typescript
 import { createQNCEEngine } from 'qnce-engine';
-import { useState, useEffect } from 'react';
+import { useState, useCallback } from 'react';
 
 function useQNCE(storyData) {
   const [engine] = useState(() => createQNCEEngine(storyData));
   const [currentNode, setCurrentNode] = useState(engine.getCurrentNode());
   const [flags, setFlags] = useState(engine.getFlags());
 
-  const selectChoice = (choice) => {
+  const selectChoice = useCallback((choice) => {
     engine.selectChoice(choice);
     setCurrentNode(engine.getCurrentNode());
     setFlags(engine.getFlags());
-  };
+  }, [engine]);
 
-  return { currentNode, flags, selectChoice };
+  const goToNodeById = useCallback((nodeId) => {
+    engine.goToNodeById(nodeId);
+    setCurrentNode(engine.getCurrentNode());
+    setFlags(engine.getFlags());
+  }, [engine]);
+
+  return { currentNode, flags, selectChoice, goToNodeById };
 }
 ```
 
@@ -973,3 +980,130 @@ MIT - See LICENSE file for details.
 ---
 
 **QNCE Engine** - Empowering interactive narratives with quantum-inspired mechanics.
+
+## 🛡️ Choice Validation System
+
+Ensure only valid choices can be executed with comprehensive validation rules.
+
+### Basic Validation
+
+```typescript
+import { createQNCEEngine } from 'qnce-engine';
+
+const engine = createQNCEEngine(storyData);
+
+try {
+  // makeChoice() automatically validates before executing
+  engine.makeChoice(0);
+} catch (error) {
+  if (error instanceof ChoiceValidationError) {
+    console.error('Invalid choice:', error.message);
+    console.log('Available choices:', error.availableChoices);
+  }
+}
+```
+
+### Advanced Choice Requirements
+
+Define complex validation rules on your choices:
+
+```typescript
+// Choice with flag requirements
+const flagBasedChoice = {
+  text: 'Use the magic key',
+  nextNodeId: 'unlock_door',
+  flagRequirements: {
+    hasKey: true,
+    playerLevel: 5
+  }
+};
+
+// Choice with inventory requirements
+const inventoryChoice = {
+  text: 'Buy expensive sword',
+  nextNodeId: 'shop_success',
+  inventoryRequirements: {
+    gold: 1000,
+    gems: 2
+  }
+};
+
+// Time-based availability
+const timedChoice = {
+  text: 'Enter the tavern',
+  nextNodeId: 'tavern',
+  timeRequirements: {
+    availableAfter: new Date('2025-01-01T18:00:00'),
+    availableBefore: new Date('2025-01-01T24:00:00')
+  }
+};
+
+// Disabled choice
+const disabledChoice = {
+  text: 'Broken bridge',
+  nextNodeId: 'fall',
+  enabled: false
+};
+```
+
+### Custom Validation Rules
+
+Create your own validation logic:
+
+```typescript
+import { 
+  StandardValidationRules, 
+  createChoiceValidator 
+} from 'qnce-engine';
+
+const validator = createChoiceValidator();
+
+// Add custom rule
+validator.addRule({
+  name: 'custom-rule',
+  priority: 10,
+  validate: (choice, context) => {
+    // Your custom logic
+    if (choice.text.includes('danger') && !context.state.flags.brave) {
+      return {
+        isValid: false,
+        reason: 'You must be brave to take this path!',
+        failedConditions: ['requires-bravery']
+      };
+    }
+    return { isValid: true };
+  }
+});
+
+// Apply to engine
+engine.setChoiceValidator(validator);
+```
+
+### Validation Error Handling
+
+```typescript
+import { 
+  ChoiceValidationError, 
+  isChoiceValidationError 
+} from 'qnce-engine';
+
+try {
+  engine.makeChoice(2);
+} catch (error) {
+  if (isChoiceValidationError(error)) {
+    // Get user-friendly message
+    const message = error.getUserFriendlyMessage();
+    console.log(message);
+    
+    // Get debug information
+    const debugInfo = error.getDebugInfo();
+    console.log('Failed conditions:', debugInfo.validationResult.failedConditions);
+    
+    // Show alternatives
+    console.log('Available choices:');
+    error.availableChoices?.forEach((choice, i) => {
+      console.log(`${i + 1}. ${choice.text}`);
+    });
+  }
+}
+```

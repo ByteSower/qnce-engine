@@ -6,7 +6,7 @@
  * Built on Sprint #2 performance infrastructure with object pooling support
  */
 
-import { NarrativeNode, Choice, QNCEState } from '../../engine/core';
+import { NarrativeNode, QNCEState } from '../../engine/core';
 
 // ================================
 // Story Structure Hierarchy

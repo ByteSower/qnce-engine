@@ -96,6 +96,27 @@ choices.forEach((choice, index) => {
 });
 ```
 
+##### goToNodeById()
+
+```typescript
+goToNodeById(nodeId: string): void
+```
+
+Navigates directly to a specific node by its ID. Throws `QNCENavigationError` if the node ID is invalid.
+
+**Parameters:**
+
+- **`nodeId`** (`string`): The ID of the node to navigate to.
+
+**Example:**
+```typescript
+try {
+  engine.goToNodeById('chapter_2_start');
+} catch (error) {
+  console.error(error.message);
+}
+```
+
 ##### makeChoice()
 
 ```typescript
@@ -478,3 +499,8 @@ Error thrown when condition expressions are invalid or unsafe.
 **Properties:**
 - `expression` (`string`): The expression that caused the error
 - `originalError` (`Error`, optional): The underlying error if available
+#### ValidationError
+
+---
+
+*This documentation is maintained for QNCE Engine v1.2.0 with complete Sprint 3 integration including Choice Validation, State Persistence, Conditional Choices, Autosave & Undo/Redo, and UI Components.*

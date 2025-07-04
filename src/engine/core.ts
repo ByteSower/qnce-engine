@@ -1,13 +1,28 @@
 // QNCE Core Engine - Framework Agnostic
 // Quantum Narrative Convergence Engine
 
-import { poolManager, PooledFlow, PooledNode } from '../performance/ObjectPool';
+import { poolManager, PooledFlow } from '../performance/ObjectPool';
 import { getThreadPool, ThreadPoolConfig } from '../performance/ThreadPool';
 import { perf, getPerfReporter } from '../performance/PerfReporter';
 
 // Branching system imports
 import { QNCEBranchingEngine, createBranchingEngine } from '../narrative/branching';
 import { QNCEStory } from '../narrative/branching/models';
+
+// Choice validation system - Sprint 3.2
+import { 
+  ChoiceValidator, 
+  createChoiceValidator, 
+  createValidationContext,
+  ValidationResult
+} from './validation';
+import { 
+  QNCENavigationError, 
+  ChoiceValidationError
+} from './errors';
+
+// Re-export error classes for backward compatibility
+export { QNCENavigationError, ChoiceValidationError } from './errors';
 
 // State persistence imports - Sprint 3.3
 import { 
@@ -43,7 +58,6 @@ import {
   UndoRedoEvent
 } from './types';
 
-// QNCE Data Models
 export interface Choice {
   text: string;
   nextNodeId: string;
@@ -69,6 +83,8 @@ export interface NarrativeNode {
   text: string;
   choices: Choice[];
 }
+
+export { QNCEStory };
 
 export interface QNCEState {
   currentNodeId: string;
@@ -103,11 +119,12 @@ function findNode(nodes: NarrativeNode[], id: string): NarrativeNode {
  */
 export class QNCEEngine {
   private state: QNCEState;
-  private storyData: StoryData;
+  public storyData: StoryData; // Made public for hot-reload compatibility
   private activeFlowEvents: FlowEvent[] = [];
   private performanceMode: boolean = false;
   private enableProfiling: boolean = false;
   private branchingEngine?: QNCEBranchingEngine;
+  private choiceValidator: ChoiceValidator; // Sprint 3.2: Choice validation
   
   // Sprint 3.3: State persistence and checkpoints
   private checkpoints: Map<string, Checkpoint> = new Map();
@@ -138,6 +155,22 @@ export class QNCEEngine {
   private lastAutosaveTime: number = 0;
   private isUndoRedoOperation: boolean = false;
 
+  public get flags(): Record<string, unknown> {
+    return this.state.flags;
+  }
+
+  public get history(): string[] {
+    return this.state.history;
+  }
+
+  public get isComplete(): boolean {
+    try {
+      return this.getCurrentNode().choices.length === 0;
+    } catch {
+      return true; // If current node not found, consider it complete
+    }
+  }
+
   constructor(
     storyData: StoryData, 
     initialState?: Partial<QNCEState>, 
@@ -147,6 +180,9 @@ export class QNCEEngine {
     this.storyData = storyData;
     this.performanceMode = performanceMode;
     this.enableProfiling = performanceMode; // Enable profiling with performance mode
+    
+    // Initialize choice validator (Sprint 3.2)
+    this.choiceValidator = createChoiceValidator();
     
     // Initialize ThreadPool if in performance mode
     if (this.performanceMode && threadPoolConfig) {
@@ -160,6 +196,55 @@ export class QNCEEngine {
     };
   }
 
+  // Sprint 3.1 - API Consistency Methods
+  
+  /**
+   * Navigate directly to a specific node by ID
+   * @param nodeId - The ID of the node to navigate to
+   * @throws {QNCENavigationError} When nodeId is invalid or not found
+   */
+  goToNodeById(nodeId: string): void {
+    // Validate node exists
+    const targetNode = this.storyData.nodes.find(n => n.id === nodeId);
+    if (!targetNode) {
+      throw new QNCENavigationError(`Node not found: ${nodeId}`);
+    }
+
+    // Performance profiling for direct navigation
+    const navigationSpanId = this.enableProfiling 
+      ? getPerfReporter().startSpan('custom', {
+          fromNodeId: this.state.currentNodeId,
+          toNodeId: nodeId,
+          navigationType: 'direct'
+        })
+      : null;
+
+    const fromNodeId = this.state.currentNodeId;
+    
+    // Update state
+    this.state.currentNodeId = nodeId;
+    this.state.history.push(nodeId);
+    
+    // Record navigation event for analytics
+    if (this.performanceMode) {
+      const flowEvent = this.createFlowEvent(fromNodeId, nodeId, { navigationType: 'direct' });
+      this.recordFlowEvent(flowEvent);
+      poolManager.returnFlow(flowEvent);
+    }
+    
+    // End profiling span
+    if (navigationSpanId && this.enableProfiling) {
+      getPerfReporter().endSpan(navigationSpanId, {
+        success: true,
+        targetNodeId: nodeId
+      });
+    }
+  }
+
+  /**
+   * Get the current narrative node
+   * @returns The current node object
+   */
   getCurrentNode(): NarrativeNode {
     const cacheKey = `node-${this.state.currentNodeId}`;
     
@@ -185,6 +270,80 @@ export class QNCEEngine {
     }
     
     return findNode(this.storyData.nodes, this.state.currentNodeId);
+  }
+
+  /**
+   * Get available choices from the current node with validation and conditional filtering
+   * @returns Array of available choices
+   */
+  getAvailableChoices(): Choice[] {
+    const currentNode = this.getCurrentNode();
+    const context: ConditionContext = {
+      state: this.state,
+      timestamp: Date.now(),
+      customData: {}
+    };
+
+    // First apply conditional filtering (Sprint 3.4)
+    const conditionallyAvailable = currentNode.choices.filter((choice) => {
+      // If no condition is specified, choice is always available
+      if (!choice.condition) {
+        return true;
+      }
+
+      try {
+        // Evaluate the condition using the condition evaluator
+        return conditionEvaluator.evaluate(choice.condition, context);
+      } catch (error) {
+        // Log condition evaluation errors but don't block other choices
+        if (error instanceof ConditionEvaluationError) {
+          console.warn(`[QNCE] Choice condition evaluation failed: ${error.message}`, {
+            choiceText: choice.text,
+            condition: choice.condition,
+            nodeId: this.state.currentNodeId
+          });
+        } else {
+          console.warn(`[QNCE] Unexpected error evaluating choice condition:`, error);
+        }
+        
+        // Return false for invalid conditions (choice won't be shown)
+        return false;
+      }
+    });
+
+    // Then apply choice validation (Sprint 3.2)
+    const validationContext = createValidationContext(
+      currentNode,
+      this.state,
+      conditionallyAvailable
+    );
+    
+    return this.choiceValidator.getAvailableChoices(validationContext);
+  }
+
+  makeChoice(choiceIndex: number): void {
+    const choices = this.getAvailableChoices();
+    if (choiceIndex < 0 || choiceIndex >= choices.length) {
+      throw new QNCENavigationError(`Invalid choice index: ${choiceIndex}. Please select a number between 1 and ${choices.length}.`);
+    }
+    
+    const selectedChoice = choices[choiceIndex];
+    
+    // Sprint 3.2: Validate choice before execution
+    const currentNode = this.getCurrentNode();
+    const context = createValidationContext(
+      currentNode,
+      this.state,
+      choices
+    );
+    
+    const validationResult = this.choiceValidator.validate(selectedChoice, context);
+    if (!validationResult.isValid) {
+      throw new ChoiceValidationError(selectedChoice, validationResult, choices);
+    }
+    
+    // Execute the validated choice
+    this.selectChoice(selectedChoice);
   }
 
   getState(): QNCEState {
@@ -703,40 +862,43 @@ export class QNCEEngine {
     return this.state.flags[flagName] === expectedValue;
   }
 
-  // Get available choices (with conditional filtering)
-  getAvailableChoices(): Choice[] {
+
+  // Sprint 3.2: Choice Validation Methods
+  
+  /**
+   * Get the choice validator instance
+   * @returns The current choice validator
+   */
+  getChoiceValidator(): ChoiceValidator {
+    return this.choiceValidator;
+  }
+
+  /**
+   * Validate a specific choice without executing it
+   * @param choice - The choice to validate
+   * @returns Validation result with details
+   */
+  validateChoice(choice: Choice): ValidationResult {
     const currentNode = this.getCurrentNode();
-    const context: ConditionContext = {
-      state: this.state,
-      timestamp: Date.now(),
-      customData: {}
-    };
+    const availableChoices = this.getAvailableChoices();
+    const context = createValidationContext(
+      currentNode,
+      this.state,
+      availableChoices
+    );
+    
+    return this.choiceValidator.validate(choice, context);
+  }
 
-    return currentNode.choices.filter((choice) => {
-      // If no condition is specified, choice is always available
-      if (!choice.condition) {
-        return true;
-      }
+  /**
+   * Check if a specific choice is valid without executing it
+   * @param choice - The choice to check
+   * @returns True if the choice is valid, false otherwise
+   */
+  isChoiceValid(choice: Choice): boolean {
+    const result = this.validateChoice(choice);
+    return result.isValid;
 
-      try {
-        // Evaluate the condition using the condition evaluator
-        return conditionEvaluator.evaluate(choice.condition, context);
-      } catch (error) {
-        // Log condition evaluation errors but don't block other choices
-        if (error instanceof ConditionEvaluationError) {
-          console.warn(`[QNCE] Choice condition evaluation failed: ${error.message}`, {
-            choiceText: choice.text,
-            condition: choice.condition,
-            nodeId: this.state.currentNodeId
-          });
-        } else {
-          console.warn(`[QNCE] Unexpected error evaluating choice condition:`, error);
-        }
-        
-        // Return false for invalid conditions (choice won't be shown)
-        return false;
-      }
-    });
   }
 
   // Performance and object pooling methods
