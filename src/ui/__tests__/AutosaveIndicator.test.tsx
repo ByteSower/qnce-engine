@@ -10,7 +10,9 @@ jest.mock('../../integrations/react', () => ({
   useAutosave: jest.fn()
 }));
 
-const mockUseAutosave = require('../../integrations/react').useAutosave;
+// Get the mocked version
+import { useAutosave } from '../../integrations/react';
+const mockUseAutosave = useAutosave as jest.MockedFunction<typeof useAutosave>;
 
 describe('AutosaveIndicator', () => {
   let engine: any;
@@ -21,9 +23,10 @@ describe('AutosaveIndicator', () => {
     
     mockAutosaveState = {
       autosave: jest.fn().mockResolvedValue(undefined),
+      configure: jest.fn(),
+      isEnabled: true,
       isSaving: false,
-      lastAutosave: new Date('2025-07-03T12:00:00Z'),
-      status: 'idle' as const
+      lastAutosave: new Date('2025-07-03T12:00:00Z')
     };
 
     mockUseAutosave.mockReturnValue(mockAutosaveState);
@@ -355,9 +358,10 @@ describe('AutosaveIndicator', () => {
     it('handles missing autosave hook return values', () => {
       mockUseAutosave.mockReturnValue({
         autosave: jest.fn(),
+        configure: jest.fn(),
+        isEnabled: false,
         isSaving: false,
-        lastAutosave: null,
-        status: 'idle'
+        lastAutosave: null
       });
 
       expect(() => {

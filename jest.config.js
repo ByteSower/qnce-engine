@@ -19,8 +19,7 @@ module.exports = {
         '!src/cli/**/*.ts',
         '!src/ui/**/*' // Exclude UI from Node tests
       ],
-      setupFilesAfterEnv: ['<rootDir>/tests/setup.ts'],
-      testTimeout: 10000
+      setupFilesAfterEnv: ['<rootDir>/tests/setup.ts']
     },
     // React/UI tests
     {
@@ -39,7 +38,7 @@ module.exports = {
           }
         }]
       },
-      moduleNameMapping: {
+      moduleNameMapper: {
         '^@/(.*)$': '<rootDir>/src/$1'
       },
       collectCoverageFrom: [

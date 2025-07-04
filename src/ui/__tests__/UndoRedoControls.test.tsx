@@ -11,7 +11,9 @@ jest.mock('../../integrations/react', () => ({
   useUndoRedo: jest.fn()
 }));
 
-const mockUseUndoRedo = require('../../integrations/react').useUndoRedo;
+// Get the mocked version
+import { useUndoRedo } from '../../integrations/react';
+const mockUseUndoRedo = useUndoRedo as jest.MockedFunction<typeof useUndoRedo>;
 
 describe('UndoRedoControls', () => {
   let engine: any;
@@ -29,6 +31,7 @@ describe('UndoRedoControls', () => {
       redoCount: 1
     };
 
+    // Setup the mock to return our mock state
     mockUseUndoRedo.mockReturnValue(mockUndoRedoState);
   });
 
