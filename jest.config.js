@@ -1,18 +1,53 @@
 module.exports = {
   preset: 'ts-jest',
-  testEnvironment: 'node',
-  roots: ['<rootDir>/src', '<rootDir>/tests'],
-  testMatch: [
-    '**/__tests__/**/*.ts',
-    '**/?(*.)+(spec|test).ts'
-  ],
-  transform: {
-    '^.+\\.ts$': 'ts-jest',
-  },
-  collectCoverageFrom: [
-    'src/**/*.ts',
-    '!src/**/*.d.ts',
-    '!src/cli/**/*.ts', // CLI tools excluded from coverage
+  projects: [
+    // Node.js tests (existing engine tests)
+    {
+      displayName: 'node',
+      testEnvironment: 'node',
+      roots: ['<rootDir>/src', '<rootDir>/tests'],
+      testMatch: [
+        '**/__tests__/**/*.ts',
+        '**/?(*.)+(spec|test).ts'
+      ],
+      transform: {
+        '^.+\\.ts$': 'ts-jest',
+      },
+      collectCoverageFrom: [
+        'src/**/*.ts',
+        '!src/**/*.d.ts',
+        '!src/cli/**/*.ts',
+        '!src/ui/**/*' // Exclude UI from Node tests
+      ],
+      setupFilesAfterEnv: ['<rootDir>/tests/setup.ts'],
+      testTimeout: 10000
+    },
+    // React/UI tests
+    {
+      displayName: 'jsdom',
+      testEnvironment: 'jsdom',
+      setupFilesAfterEnv: ['<rootDir>/src/ui/__tests__/setup.ts'],
+      roots: ['<rootDir>/src/ui'],
+      testMatch: [
+        '<rootDir>/src/ui/**/__tests__/**/*.test.{ts,tsx}',
+        '<rootDir>/src/ui/**/*.test.{ts,tsx}'
+      ],
+      transform: {
+        '^.+\\.(ts|tsx)$': ['ts-jest', {
+          tsconfig: {
+            jsx: 'react-jsx'
+          }
+        }]
+      },
+      moduleNameMapping: {
+        '^@/(.*)$': '<rootDir>/src/$1'
+      },
+      collectCoverageFrom: [
+        'src/ui/**/*.{ts,tsx}',
+        '!src/ui/**/*.d.ts',
+        '!src/ui/__tests__/**/*'
+      ]
+    }
   ],
   coverageDirectory: 'coverage',
   coverageReporters: [
@@ -29,7 +64,5 @@ module.exports = {
       statements: 60
     }
   },
-  setupFilesAfterEnv: ['<rootDir>/tests/setup.ts'],
-  testTimeout: 10000,
   verbose: true
 };

@@ -284,7 +284,7 @@ describe('QNCE Engine Core - Sprint #1 Test Scaffolds', () => {
   describe('Error Handling - Performance Target: 0 Errors', () => {
     test('should handle invalid node access gracefully', () => {
       expect(() => {
-        engine.loadState({
+        engine.loadSimpleState({
           currentNodeId: 'nonexistent',
           flags: {},
           history: ['start']
@@ -315,7 +315,7 @@ describe('QNCE Engine Core - Sprint #1 Test Scaffolds', () => {
       const originalState = engine.getState();
       
       try {
-        engine.loadState({
+        engine.loadSimpleState({
           currentNodeId: 'invalid',
           flags: {},
           history: ['start']
@@ -325,7 +325,7 @@ describe('QNCE Engine Core - Sprint #1 Test Scaffolds', () => {
         // Error expected and handled
         measurePerformance.trackError();
         // Restore to valid state
-        engine.loadState(originalState);
+        engine.loadSimpleState(originalState);
       }
 
       // Engine should still work correctly
@@ -366,6 +366,108 @@ describe('QNCE Engine Core - Sprint #1 Test Scaffolds', () => {
 
       const history = engine.getHistory();
       expect(history).toEqual(['start', 'left', 'secret']);
+    });
+  });
+
+  describe('State Persistence & Checkpoints - Sprint 3.3', () => {
+    test('should save and load state correctly', async () => {
+      // Navigate to a specific state
+      engine.selectChoice(engine.getCurrentNode().choices[0]); // Go left
+      engine.selectChoice(engine.getCurrentNode().choices[0]); // Open door
+      const originalState = engine.getState();
+
+      const serializedState = await engine.saveState();
+
+      // Reset engine to initial state
+      engine.resetNarrative();
+      expect(engine.getCurrentNode().id).toBe('start');
+
+      // Load the saved state
+      const loadResult = await engine.loadState(serializedState);
+      expect(loadResult.success).toBe(true);
+
+      const restoredState = engine.getState();
+      expect(restoredState.currentNodeId).toBe(originalState.currentNodeId);
+      expect(restoredState.flags).toEqual(originalState.flags);
+      expect(restoredState.history).toEqual(originalState.history);
+    });
+
+    test('should perform save/load operations within performance target (≤2ms)', async () => {
+      engine.selectChoice(engine.getCurrentNode().choices[1]); // Go right
+
+      const saveTime = await measurePerformance.measureAsyncAction(async () => {
+        await engine.saveState();
+      });
+      expect(saveTime).toBeLessThanOrEqual(2);
+
+      const serializedState = await engine.saveState();
+
+      const loadTime = await measurePerformance.measureAsyncAction(async () => {
+        await engine.loadState(serializedState);
+      });
+      expect(loadTime).toBeLessThanOrEqual(2);
+    });
+
+    test('should handle invalid or corrupted serialized state', async () => {
+      const invalidJson = { invalid: true } as any;
+      const result = await engine.loadState(invalidJson);
+      expect(result.success).toBe(false);
+      expect(result.error).toContain('Invalid serialized state');
+    });
+
+    test('should reject state with mismatched story hash', async () => {
+      const serializedState = await engine.saveState();
+      const differentStoryEngine = createQNCEEngine({ initialNodeId: 'a', nodes: [{id: 'a', text: 'a', choices: []}] });
+      const result = await differentStoryEngine.loadState(serializedState);
+      expect(result.success).toBe(false);
+      expect(result.error).toContain('Story hash mismatch');
+    });
+
+    test('should create and restore from a checkpoint', async () => {
+      engine.selectChoice(engine.getCurrentNode().choices[0]); // Go left
+      const stateBeforeCheckpoint = engine.getState();
+
+      const checkpoint = await engine.createCheckpoint('Test Checkpoint');
+      expect(checkpoint).toBeDefined();
+      const checkpointId = checkpoint.id;
+
+      // Change state further
+      engine.selectChoice(engine.getCurrentNode().choices[0]); // Open door
+      expect(engine.getCurrentNode().id).toBe('secret');
+
+      // Restore from checkpoint
+      const restoreResult = await engine.restoreFromCheckpoint(checkpointId!);
+      expect(restoreResult.success).toBe(true);
+
+      const stateAfterRestore = engine.getState();
+      expect(stateAfterRestore.currentNodeId).toBe(stateBeforeCheckpoint.currentNodeId);
+      expect(stateAfterRestore.flags).toEqual(stateBeforeCheckpoint.flags);
+    });
+
+    test('should manage multiple checkpoints', async () => {
+      await engine.createCheckpoint('CP1');
+      engine.selectChoice(engine.getCurrentNode().choices[0]); // Go left
+      await engine.createCheckpoint('CP2');
+
+      const checkpoints = engine.getCheckpoints();
+      expect(checkpoints.length).toBe(2);
+      // Note: Order isn't guaranteed, so check for labels existence
+      const labels = checkpoints.map(c => c.name);
+      expect(labels).toContain('CP1');
+      expect(labels).toContain('CP2');
+
+      const cp1 = checkpoints.find(c => c.name === 'CP1');
+      expect(cp1).toBeDefined();
+      if (cp1) {
+        engine.deleteCheckpoint(cp1.id);
+      }
+      expect(engine.getCheckpoints().length).toBe(1);
+    });
+
+    test('should handle restoring from a non-existent checkpoint', async () => {
+        const restoreResult = await engine.restoreFromCheckpoint('non-existent-id');
+        expect(restoreResult.success).toBe(false);
+        expect(restoreResult.error).toContain('not found');
     });
   });
 });

@@ -32,6 +32,20 @@ export const measurePerformance = {
     return transitionTime;
   },
 
+  measureAction: (fn: () => any): number => {
+    const start = performance.now();
+    fn();
+    const end = performance.now();
+    return end - start;
+  },
+
+  measureAsyncAction: async (fn: () => Promise<any>): Promise<number> => {
+    const start = performance.now();
+    await fn();
+    const end = performance.now();
+    return end - start;
+  },
+
   // Track cache hits/misses (target: ≥95% hit rate)
   trackCacheHit: (): void => {
     performanceMetrics.cacheHitRate.hits++;

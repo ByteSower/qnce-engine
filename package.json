@@ -7,12 +7,13 @@
   "bin": {
     "qnce-audit": "dist/cli/audit.js",
     "qnce-init": "dist/cli/init.js",
-    "qnce-perf": "dist/cli/perf.js"
+    "qnce-perf": "dist/cli/perf.js",
+    "qnce-play": "dist/cli/play.js"
   },
   "scripts": {
     "build": "tsc",
     "build:watch": "tsc --watch",
-    "build:examples": "tsc examples/**/*.ts --outDir dist --target ES2022 --module ES2022 --moduleResolution Node --strict --esModuleInterop --skipLibCheck --declaration false",
+    "build:examples": "tsc --outDir dist/examples --target ES2022 --module CommonJS --moduleResolution Node --strict --esModuleInterop --skipLibCheck --declaration false examples/persistence-demo.ts examples/autosave-undo-demo.ts",
     "lint": "eslint .",
     "test": "./node_modules/.bin/jest",
     "test:watch": "./node_modules/.bin/jest --watch",
@@ -20,6 +21,8 @@
     "test:performance": "node scripts/performance-tests.js",
     "demo:performance": "npm run build && node scripts/performance-demo.js",
     "demo:quickstart": "npm run build && node examples/quickstart-demo.js",
+    "demo:persistence": "npm run build:examples && node dist/examples/examples/persistence-demo.js",
+    "demo:autosave": "npm run build:examples && node dist/examples/examples/autosave-undo-demo.js",
     "prepublishOnly": "npm run build && npm run test"
   },
   "keywords": [
@@ -37,14 +40,26 @@
     "url": "https://github.com/ByteSower/qnce-engine.git"
   },
   "devDependencies": {
+    "@testing-library/dom": "^10.4.0",
+    "@testing-library/jest-dom": "^6.6.3",
+    "@testing-library/react": "^16.3.0",
+    "@testing-library/user-event": "^14.6.1",
     "@types/jest": "^29.5.14",
     "@types/node": "^20.0.0",
+    "@types/react": "^18.0.0",
     "@typescript-eslint/eslint-plugin": "^6.21.0",
     "@typescript-eslint/parser": "^6.21.0",
     "eslint": "^8.57.1",
+    "eslint-plugin-react": "^7.33.0",
+    "eslint-plugin-react-hooks": "^4.6.0",
     "jest": "^29.7.0",
+    "jest-environment-jsdom": "^30.0.4",
+    "react": "^18.0.0",
     "ts-jest": "^29.4.0",
     "typescript": "~5.8.3"
+  },
+  "peerDependencies": {
+    "react": ">=16.8.0"
   },
   "files": [
     "dist/**/*",

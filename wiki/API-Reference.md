@@ -148,6 +148,84 @@ engine.setFlag('player_level', 5);
 engine.setFlag('has_sword', true);
 ```
 
+##### setConditionEvaluator()
+
+```typescript
+setConditionEvaluator(evaluator: CustomConditionEvaluator): void
+```
+
+Sets a custom condition evaluator for complex choice logic.
+
+**Parameters:**
+- `evaluator` (`CustomConditionEvaluator`): Function that evaluates custom conditions
+
+**Example:**
+```typescript
+engine.setConditionEvaluator((expression, context) => {
+  if (expression === 'hasSpecialItem') {
+    return context.flags.inventory?.includes('magic_sword');
+  }
+  return null; // Fall back to default evaluator
+});
+```
+
+##### clearConditionEvaluator()
+
+```typescript
+clearConditionEvaluator(): void
+```
+
+Removes the custom condition evaluator, reverting to default expression evaluation.
+
+**Example:**
+```typescript
+engine.clearConditionEvaluator();
+```
+
+##### validateCondition()
+
+```typescript
+validateCondition(expression: string): boolean
+```
+
+Validates whether a condition expression is syntactically correct and safe.
+
+**Parameters:**
+- `expression` (`string`): The condition expression to validate
+
+**Returns:** `boolean` - True if the expression is valid
+
+**Throws:** `ConditionEvaluationError` if the expression is invalid
+
+**Example:**
+```typescript
+try {
+  engine.validateCondition('flags.level >= 5 && !flags.gameOver');
+  console.log('Expression is valid');
+} catch (error) {
+  console.error('Invalid expression:', error.message);
+}
+```
+
+##### getConditionFlags()
+
+```typescript
+getConditionFlags(expression: string): string[]
+```
+
+Extracts flag references from a condition expression for debugging or analysis.
+
+**Parameters:**
+- `expression` (`string`): The condition expression to analyze
+
+**Returns:** `string[]` - Array of flag names referenced in the expression
+
+**Example:**
+```typescript
+const flags = engine.getConditionFlags('flags.strength >= 3 && flags.hasKey');
+console.log(flags); // ['strength', 'hasKey']
+```
+
 ##### reset()
 
 ```typescript
@@ -159,6 +237,82 @@ Resets the engine to the initial state.
 **Example:**
 ```typescript
 engine.reset(); // Start story over
+```
+
+##### saveState()
+
+```typescript
+async saveState(options?: SerializationOptions): Promise<string>
+```
+
+Serializes the complete engine state to a JSON string. This is ideal for saving game progress.
+
+**Parameters:**
+- `options` (`SerializationOptions`, optional): Configuration for serialization, like enabling checksums or pretty printing.
+
+**Returns:** `Promise<string>` - A JSON string representing the complete engine state.
+
+**Example:**
+```typescript
+const savedState = await engine.saveState({ prettyPrint: true });
+// Store `savedState` in localStorage, a file, or a database.
+```
+
+##### loadState()
+
+```typescript
+async loadState(serializedState: string | SerializedState, options?: LoadOptions): Promise<void>
+```
+
+Restores the engine state from a serialized state object or a JSON string.
+
+**Parameters:**
+- `serializedState` (`string | SerializedState`): The state to load.
+- `options` (`LoadOptions`, optional): Configuration for deserialization, like verifying checksums.
+
+**Throws:** `Error` if the state is invalid, corrupted, or incompatible.
+
+**Example:**
+```typescript
+await engine.loadState(savedState);
+console.log('State loaded!');
+```
+
+##### createCheckpoint()
+
+```typescript
+async createCheckpoint(name?: string): Promise<Checkpoint>
+```
+
+Creates a lightweight, in-memory checkpoint of the current narrative state. Useful for implementing undo/redo functionality.
+
+**Parameters:**
+- `name` (`string`, optional): A descriptive name for the checkpoint (e.g., "Before risky choice").
+
+**Returns:** `Promise<Checkpoint>` - The created checkpoint object, containing its ID and a snapshot of the state.
+
+**Example:**
+```typescript
+const checkpoint = await engine.createCheckpoint('Before risky choice');
+```
+
+##### restoreFromCheckpoint()
+
+```typescript
+async restoreFromCheckpoint(checkpointId: string): Promise<void>
+```
+
+Restores the engine state from a previously created in-memory checkpoint.
+
+**Parameters:**
+- `checkpointId` (`string`): The ID of the checkpoint to restore.
+
+**Throws:** `Error` if the checkpoint ID is not found.
+
+**Example:**
+```typescript
+await engine.restoreFromCheckpoint(checkpoint.id);
+console.log('Restored to previous state.');
 ```
 
 ## 📊 Data Models
@@ -232,6 +386,7 @@ interface Choice {
   text: string;
   nextNodeId: string;
   flagEffects?: Record<string, any>;
+  condition?: string;
   conditions?: Condition[];
   metadata?: ChoiceMetadata;
 }
@@ -244,491 +399,82 @@ interface Choice {
 | `text` | `string` | ✅ | Choice display text |
 | `nextNodeId` | `string` | ✅ | Target node ID |
 | `flagEffects` | `Record<string, any>` | ❌ | Flags changed by this choice |
-| `conditions` | `Condition[]` | ❌ | Conditions for choice availability |
+| `condition` | `string` | ❌ | Expression for choice availability (e.g., `"flags.level >= 3"`) |
+| `conditions` | `Condition[]` | ❌ | Legacy: Conditions for choice availability |
 | `metadata` | `ChoiceMetadata` | ❌ | Additional choice information |
 
-### Condition Interface
+#### Condition Expressions
 
-Conditional logic for choices and nodes.
+The `condition` property accepts JavaScript-like expressions for determining choice availability:
 
 ```typescript
-interface Condition {
-  type: 'flag' | 'and' | 'or' | 'not' | 'time_limit' | 'custom';
-  operator?: 'equals' | 'not_equals' | 'greater_than' | 'less_than' | 'exists';
-  key?: string;
-  value?: any;
-  conditions?: Condition[];
-  customEvaluator?: (flags: Record<string, any>) => boolean;
-}
+// Simple flag checks
+"flags.hasKey"
+"!flags.doorLocked"
+
+// Numeric comparisons  
+"flags.level >= 5"
+"flags.health > 0"
+
+// Complex logical expressions
+"flags.strength >= 3 && flags.hasWeapon"
+"flags.magic > 2 || flags.charm >= 5"
+"(flags.stealth >= 4 || flags.lockpick) && !flags.alarmTriggered"
+
+// Context access
+"context.timeElapsed < 300"
+"context.visitCount <= 2"
 ```
 
-## 🌿 Branching System API
+### ConditionEvaluator Types
 
-### BranchingEngine Class
-
-Advanced branching functionality.
-
-#### Methods
-
-##### insertBranch()
+Types for custom condition evaluation logic.
 
 ```typescript
-insertBranch(branch: Branch): void
-```
-
-Dynamically inserts a new story branch.
-
-**Parameters:**
-- `branch` (`Branch`): Branch definition to insert
-
-**Example:**
-```typescript
-engine.insertBranch({
-  id: 'emergency-exit',
-  sourceNodeId: 'dangerous-room',
-  targetNodeId: 'safety',
-  text: 'Look for emergency exit',
-  conditions: [{ type: 'flag', key: 'danger_level', operator: 'greater_than', value: 5 }]
-});
-```
-
-##### removeBranch()
-
-```typescript
-removeBranch(branchId: string): void
-```
-
-Removes a dynamic branch.
-
-**Parameters:**
-- `branchId` (`string`): ID of branch to remove
-
-##### generateAIBranches()
-
-```typescript
-async generateAIBranches(options: AIGenerationOptions): Promise<Branch[]>
-```
-
-Generates story branches using AI.
-
-**Parameters:**
-- `options` (`AIGenerationOptions`): AI generation configuration
-
-**Returns:** `Promise<Branch[]>` - Generated branches
-
-**Example:**
-```typescript
-const branches = await engine.generateAIBranches({
-  sourceNodeId: 'conflict',
-  maxBranches: 3,
-  themes: ['diplomacy', 'combat', 'stealth'],
-  playerContext: engine.getFlags()
-});
-```
-
-### AIContext Interface
-
-Context for AI-driven content generation.
-
-```typescript
-interface AIContext {
-  playerProfile: PlayerProfile;
-  storyThemes: string[];
-  currentMood: string;
-  recentChoices: string[];
-  preferredStyle: string;
-  difficultyLevel: string;
-  customData?: Record<string, any>;
-}
-```
-
-## ⚡ Performance API
-
-### PerformanceMonitor Class
-
-Performance monitoring and profiling.
-
-#### Methods
-
-##### startProfiling()
-
-```typescript
-startProfiling(options?: ProfilingOptions): void
-```
-
-Starts performance profiling.
-
-**Parameters:**
-- `options` (`ProfilingOptions`, optional): Profiling configuration
-
-##### getMetrics()
-
-```typescript
-getMetrics(): PerformanceMetrics
-```
-
-Returns current performance metrics.
-
-**Returns:** `PerformanceMetrics` - Performance data
-
-**Example:**
-```typescript
-const metrics = engine.getPerformanceMetrics();
-console.log('Memory usage:', metrics.memoryUsage);
-console.log('Avg transition time:', metrics.avgTransitionTime);
-```
-
-##### enableObjectPooling()
-
-```typescript
-enableObjectPooling(config: PoolingConfig): void
-```
-
-Enables object pooling for performance optimization.
-
-**Parameters:**
-- `config` (`PoolingConfig`): Pooling configuration
-
-### PerformanceMetrics Interface
-
-Performance measurement data.
-
-```typescript
-interface PerformanceMetrics {
-  memoryUsage: number;           // Current memory usage (MB)
-  avgTransitionTime: number;     // Average state transition time (ms)
-  maxTransitionTime: number;     // Maximum transition time (ms)
-  cacheHitRate: number;          // Cache hit rate (0-1)
-  totalTransitions: number;      // Total transitions performed
-  uptime: number;                // Engine uptime (ms)
-  gcPressure: number;            // Garbage collection pressure
-}
-```
-
-## 🛠️ Configuration Interfaces
-
-### QNCEEngineOptions
-
-Engine configuration options.
-
-```typescript
-interface QNCEEngineOptions {
-  enablePerformanceMode?: boolean;
-  enableBranching?: boolean;
-  performanceOptions?: PerformanceOptions;
-  branchingOptions?: BranchingOptions;
-  validationMode?: 'strict' | 'normal' | 'none';
-  debugMode?: boolean;
-}
-```
-
-### PerformanceOptions
-
-Performance-related configuration.
-
-```typescript
-interface PerformanceOptions {
-  objectPooling?: PoolingConfig;
-  backgroundProcessing?: BackgroundConfig;
-  caching?: CacheConfig;
-  profiling?: ProfilingConfig;
-}
-```
-
-### BranchingOptions
-
-Advanced branching configuration.
-
-```typescript
-interface BranchingOptions {
-  maxActiveBranches?: number;
-  branchCacheSize?: number;
-  enableDynamicInsertion?: boolean;
-  enableAnalytics?: boolean;
-  aiIntegration?: AIIntegrationConfig;
-}
-```
-
-## 🎮 Event System API
-
-### Event Handling
-
-QNCE Engine supports event-driven architecture for reactive programming.
-
-#### addEventListener()
-
-```typescript
-addEventListener(event: string, handler: EventHandler): void
-```
-
-Adds an event listener.
-
-**Parameters:**
-- `event` (`string`): Event name
-- `handler` (`EventHandler`): Event handler function
-
-**Events:**
-- `'nodeChanged'` - Fired when current node changes
-- `'choiceMade'` - Fired when player makes a choice
-- `'flagChanged'` - Fired when flag value changes
-- `'storyComplete'` - Fired when story reaches an end
-- `'performanceAlert'` - Fired when performance thresholds are exceeded
-
-**Example:**
-```typescript
-engine.addEventListener('nodeChanged', (node) => {
-  console.log('Navigated to:', node.id);
-});
-
-engine.addEventListener('flagChanged', (flag, oldValue, newValue) => {
-  console.log(`Flag ${flag} changed from ${oldValue} to ${newValue}`);
-});
-```
-
-#### removeEventListener()
-
-```typescript
-removeEventListener(event: string, handler: EventHandler): void
-```
-
-Removes an event listener.
-
-## 🔧 Utility Functions
-
-### loadStoryData()
-
-```typescript
-function loadStoryData(data: any): QNCEStory
-```
-
-Loads and validates story data from various formats.
-
-**Parameters:**
-- `data` (`any`): Raw story data (JSON, object, etc.)
-
-**Returns:** `QNCEStory` - Validated story object
-
-**Throws:** `Error` if data is invalid
-
-### validateStory()
-
-```typescript
-function validateStory(story: QNCEStory): ValidationResult
-```
-
-Validates story structure and integrity.
-
-**Parameters:**
-- `story` (`QNCEStory`): Story to validate
-
-**Returns:** `ValidationResult` - Validation results
-
-### migrateStory()
-
-```typescript
-function migrateStory(oldStory: any, targetVersion: string): QNCEStory
-```
-
-Migrates story data between versions.
-
-**Parameters:**
-- `oldStory` (`any`): Legacy story data
-- `targetVersion` (`string`): Target format version
-
-**Returns:** `QNCEStory` - Migrated story
-
-## 🧪 Testing Utilities
-
-### createTestEngine()
-
-```typescript
-function createTestEngine(story?: QNCEStory): TestEngine
-```
-
-Creates an engine instance optimized for testing.
-
-**Returns:** `TestEngine` - Test-optimized engine
-
-### TestEngine Class
-
-Extended engine with testing capabilities.
-
-#### Methods
-
-##### simulateChoices()
-
-```typescript
-simulateChoices(choices: number[]): void
-```
-
-Simulates a sequence of choices for testing.
-
-##### getTestMetrics()
-
-```typescript
-getTestMetrics(): TestMetrics
-```
-
-Returns testing-specific metrics.
-
-##### validatePath()
-
-```typescript
-validatePath(path: string[]): ValidationResult
-```
-
-Validates a specific story path.
-
-## 📱 Framework Integration APIs
-
-### React Hooks
-
-#### useQNCE()
-
-```typescript
-function useQNCE(story: QNCEStory, options?: QNCEEngineOptions): QNCEHookResult
-```
-
-React hook for QNCE integration.
-
-**Returns:**
-```typescript
-interface QNCEHookResult {
-  currentNode: Node;
-  choices: Choice[];
+type CustomConditionEvaluator = (
+  expression: string,
+  context: ConditionContext
+) => boolean | null;
+
+interface ConditionContext {
   flags: Record<string, any>;
-  makeChoice: (index: number) => void;
-  reset: () => void;
-  isComplete: boolean;
+  context: {
+    timeElapsed?: number;
+    visitCount?: number;
+    [key: string]: any;
+  };
+}
+
+class ConditionEvaluationError extends Error {
+  expression: string;
+  originalError?: Error;
+  
+  constructor(message: string, expression: string, originalError?: Error);
 }
 ```
 
-### Vue Composables
+#### CustomConditionEvaluator
 
-#### useQNCE()
+A function that evaluates custom condition logic. Return `null` to fall back to default expression evaluation.
 
-```typescript
-function useQNCE(story: QNCEStory, options?: QNCEEngineOptions): QNCEComposableResult
-```
+**Parameters:**
+- `expression` (`string`): The condition expression to evaluate
+- `context` (`ConditionContext`): Current game state and context
 
-Vue 3 composable for QNCE integration.
+**Returns:** `boolean | null` - `true` if condition is met, `false` if not, `null` to use default evaluator
 
-## 🚨 Error Handling
+#### ConditionContext
 
-### Error Types
+Context object passed to condition evaluators containing current game state.
 
-#### QNCEError
+**Properties:**
+- `flags` (`Record<string, any>`): Current story flags
+- `context` (`object`): Additional context like time elapsed, visit counts, etc.
 
-Base error class for QNCE-specific errors.
+#### ConditionEvaluationError
 
-```typescript
-class QNCEError extends Error {
-  code: string;
-  context?: any;
-}
-```
+Error thrown when condition expressions are invalid or unsafe.
 
-#### ValidationError
-
-Error thrown during story validation.
-
-```typescript
-class ValidationError extends QNCEError {
-  issues: ValidationIssue[];
-}
-```
-
-#### PerformanceError
-
-Error thrown when performance limits are exceeded.
-
-```typescript
-class PerformanceError extends QNCEError {
-  metric: string;
-  threshold: number;
-  actual: number;
-}
-```
-
-### Error Handling Best Practices
-
-```typescript
-try {
-  const engine = createQNCEEngine(story);
-  engine.makeChoice(0);
-} catch (error) {
-  if (error instanceof ValidationError) {
-    console.error('Story validation failed:', error.issues);
-  } else if (error instanceof PerformanceError) {
-    console.error('Performance threshold exceeded:', error.metric);
-  } else {
-    console.error('Unexpected error:', error.message);
-  }
-}
-```
-
-## 📚 TypeScript Definitions
-
-### Complete Type Exports
-
-```typescript
-// Core types
-export type {
-  QNCEStory,
-  Node,
-  Choice,
-  Condition,
-  QNCEEngineOptions,
-  PerformanceMetrics
-};
-
-// Branching types
-export type {
-  BranchingConfig,
-  AIContext,
-  Branch,
-  PlayerProfile
-};
-
-// Performance types
-export type {
-  PerformanceOptions,
-  PoolingConfig,
-  ProfilingConfig
-};
-
-// Event types
-export type {
-  EventHandler,
-  NodeChangedEvent,
-  ChoiceMadeEvent,
-  FlagChangedEvent
-};
-```
-
-### Generic Types
-
-```typescript
-// Custom flag types
-interface TypedFlags {
-  [key: string]: string | number | boolean;
-}
-
-// Custom metadata types
-interface CustomNodeMetadata {
-  author?: string;
-  difficulty?: number;
-  tags?: string[];
-}
-
-// Usage with custom types
-const engine = createQNCEEngine<TypedFlags, CustomNodeMetadata>(story);
-```
-
----
-
-## 📍 Wiki Navigation
-
-**← Previous:** [CLI Usage](CLI-Usage) | **You are here:** API Reference | **Next:** [Contributing →](Contributing)
-
-**All Pages:** [Home](Home) • [Getting Started](Getting-Started) • [Branching Guide](Branching-Guide) • [Performance Tuning](Performance-Tuning) • [CLI Usage](CLI-Usage) • **API Reference** • [Contributing](Contributing) • [Release Notes](Release-Notes)
+**Properties:**
+- `expression` (`string`): The expression that caused the error
+- `originalError` (`Error`, optional): The underlying error if available

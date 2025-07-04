@@ -18,6 +18,183 @@
 - **Real-time branch insertion/removal** for live content updates
 - **Comprehensive analytics** for narrative optimization
 
+### 🔄 Autosave & Undo/Redo System
+- **Intelligent state tracking** with automatic snapshots on key events
+- **Sub-millisecond undo/redo operations** with configurable history depth
+- **Autosave throttling** prevents excessive saves during rapid changes
+- **Memory efficient** with automatic cleanup and history limits
+
+### 🎯 Conditional Choice Display
+
+QNCE Engine supports conditional choice display, allowing authors to show or hide narrative choices based on flags, time, inventory, or custom logic. This enables dynamic storytelling where available options change based on the player's journey.
+
+#### Basic Flag-Based Conditions
+
+```typescript
+import { createQNCEEngine } from 'qnce-engine';
+
+const storyData = {
+  currentNodeId: 'town-square',
+  nodes: {
+    'town-square': {
+      id: 'town-square',
+      text: 'You stand in the bustling town square.',
+      choices: [
+        {
+          id: 'enter-tavern',
+          text: 'Enter the tavern',
+          nextNodeId: 'tavern-inside'
+        },
+        {
+          id: 'approach-guard',
+          text: 'Approach the suspicious guard',
+          nextNodeId: 'guard-encounter',
+          condition: 'flags.curiosity >= 3'  // Only show if curious enough
+        },
+        {
+          id: 'use-disguise',
+          text: 'Use your disguise to blend in',
+          nextNodeId: 'disguised-approach',
+          condition: 'flags.hasDisguise && !flags.disguiseUsed'
+        }
+      ]
+    }
+  },
+  flags: {}
+};
+
+const engine = createQNCEEngine(storyData);
+
+// Set flags to test conditional choices
+engine.setFlag('curiosity', 4);
+engine.setFlag('hasDisguise', true);
+
+// Get available choices - only those meeting conditions
+const choices = engine.getAvailableChoices();
+console.log(`Available choices: ${choices.length}`); // Shows 3 choices
+
+// Change flags to see different options
+engine.setFlag('curiosity', 1); // Below threshold
+const reducedChoices = engine.getAvailableChoices();
+console.log(`Available choices: ${reducedChoices.length}`); // Shows 2 choices
+```
+
+#### Complex Conditional Expressions
+
+```typescript
+const complexStory = {
+  currentNodeId: 'critical-moment',
+  nodes: {
+    'critical-moment': {
+      id: 'critical-moment',
+      text: 'The fate of the kingdom hangs in the balance.',
+      choices: [
+        {
+          id: 'diplomatic-solution',
+          text: 'Attempt diplomatic negotiation',
+          nextNodeId: 'peaceful-resolution',
+          condition: 'flags.charisma >= 5 && flags.hasAlliance'
+        },
+        {
+          id: 'magical-intervention',
+          text: 'Cast the ancient spell',
+          nextNodeId: 'magical-outcome',
+          condition: 'flags.magicPower > 3 && flags.spellComponents >= 2 && !flags.cursed'
+        },
+        {
+          id: 'time-limited-escape',
+          text: 'Escape through the secret passage',
+          nextNodeId: 'secret-escape',
+          condition: 'context.timeElapsed < 300 && flags.knowsSecretPath'
+        },
+        {
+          id: 'sacrifice-play',
+          text: 'Make the ultimate sacrifice',
+          nextNodeId: 'heroic-end',
+          condition: '(flags.loyalty >= 8 || flags.desperate) && flags.hasArtifact'
+        }
+      ]
+    }
+  },
+  flags: {}
+};
+```
+
+#### Custom Condition Evaluators
+
+For advanced scenarios, you can provide custom logic for condition evaluation:
+
+```typescript
+// Set up custom evaluator for complex game logic
+engine.setConditionEvaluator((expression, context) => {
+  // Custom logic for special conditions
+  if (expression === 'canUseSpecialAbility') {
+    return context.flags.level >= 10 && 
+           context.flags.mana > 50 && 
+           !context.flags.abilityOnCooldown;
+  }
+  
+  if (expression.startsWith('inventory:')) {
+    const itemName = expression.replace('inventory:', '');
+    return context.flags[`has_${itemName}`] === true;
+  }
+  
+  // Fall back to default expression evaluation
+  return null;
+});
+
+// Use custom conditions in story
+const storyWithCustom = {
+  currentNodeId: 'boss-fight',
+  nodes: {
+    'boss-fight': {
+      id: 'boss-fight',
+      text: 'The dragon roars menacingly.',
+      choices: [
+        {
+          id: 'special-attack',
+          text: 'Use your special ability',
+          nextNodeId: 'special-victory',
+          condition: 'canUseSpecialAbility'
+        },
+        {
+          id: 'use-potion',
+          text: 'Drink healing potion',
+          nextNodeId: 'healed-state',
+          condition: 'inventory:healing_potion'
+        }
+      ]
+    }
+  }
+};
+```
+
+#### Condition Validation & Debugging
+
+```typescript
+// Validate conditions during development
+try {
+  engine.validateCondition('flags.strength >= 5 && flags.weapon');
+  console.log('Condition is valid');
+} catch (error) {
+  console.error('Invalid condition:', error.message);
+}
+
+// Get flags referenced in a condition for debugging
+const referencedFlags = engine.getConditionFlags('flags.curiosity >= 3 && flags.hasKey');
+console.log('Referenced flags:', referencedFlags); // ['curiosity', 'hasKey']
+
+// Clear custom evaluator
+engine.clearConditionEvaluator();
+```
+
+#### Performance Considerations
+
+- **Expression Caching:** Conditions are compiled once and cached for subsequent evaluations
+- **Safe Evaluation:** All expressions are sanitized to prevent code injection
+- **Minimal Overhead:** Choice filtering adds <1ms to `getAvailableChoices()` calls
+- **Error Isolation:** Invalid conditions don't affect other choices in the same node
+
 ### ⚡ Performance Infrastructure
 - **🏊‍♂️ Object Pooling:** 90%+ allocation reduction, eliminating GC pressure
 - **🧵 Background Processing:** Non-blocking cache preloading and telemetry writes  
@@ -95,6 +272,129 @@ const engine = createQNCEEngine(DEMO_STORY, {}, true, {
 const poolStats = engine.getPoolStats();
 console.log(`Pool efficiency: ${poolStats.flow.hitRate}%`);
 ```
+
+### 💾 State Persistence & Checkpoints
+
+QNCE Engine provides robust state persistence and checkpointing, allowing you to save and load the complete narrative state. This is useful for implementing save games, undo/redo functionality, and scenario replay.
+
+**Key Features:**
+- **Full State Serialization:** Save and load the entire engine state, including narrative position, flags, history, and branching context.
+- **Lightweight Checkpoints:** Create fast, in-memory snapshots for undo operations or temporary state saves.
+- **Data Integrity:** Optional checksum verification ensures that saved data is not corrupted.
+- **Cross-Version Compatibility:** A migration system helps upgrade older save states to the latest version.
+
+**Example Usage:**
+
+```typescript
+import { createQNCEEngine, DEMO_STORY } from 'qnce-engine';
+
+const engine = createQNCEEngine(DEMO_STORY);
+
+// ...progress through the story...
+const choices = engine.getAvailableChoices();
+if (choices.length > 0) {
+  engine.selectChoice(choices[0]);
+}
+
+
+// Save the current state to a JSON string
+const savedState = await engine.saveState();
+console.log('State saved!');
+
+// ...later, or in a new session...
+
+// Create a new engine instance
+const newEngine = createQNCEEngine(DEMO_STORY);
+
+// Load the state
+await newEngine.loadState(JSON.parse(savedState));
+
+console.log('State loaded successfully!');
+console.log('Current Node:', newEngine.getCurrentNode().text);
+
+// Create a lightweight checkpoint
+const checkpoint = await engine.createCheckpoint('Before a risky choice');
+
+// ...make a choice...
+
+// Restore to the checkpoint
+await engine.restoreFromCheckpoint(checkpoint.id);
+console.log('Restored to checkpoint:', engine.getCurrentNode().text);
+```
+
+### 🔄 Autosave & Undo/Redo System
+
+QNCE Engine v1.2.0 introduces an advanced autosave and undo/redo system that automatically tracks state changes and provides instant rollback capabilities with sub-millisecond performance.
+
+**Key Features:**
+- **Automatic State Tracking:** Intelligently captures state snapshots on key events (choice selection, flag changes, state loading)
+- **High-Performance Undo/Redo:** Sub-millisecond undo/redo operations with configurable history depth
+- **Autosave Throttling:** Configurable throttling prevents excessive saves during rapid state changes
+- **Memory Efficient:** Capped history with automatic cleanup of older entries
+
+**Basic Usage:**
+
+```typescript
+import { createQNCEEngine, DEMO_STORY } from 'qnce-engine';
+
+const engine = createQNCEEngine(DEMO_STORY);
+
+// Autosave is enabled by default and will track state changes automatically
+console.log('Can undo:', engine.canUndo()); // false initially
+
+// Make some choices (autosave will track each change)
+const choices = engine.getAvailableChoices();
+engine.selectChoice(choices[0]);
+
+console.log('Can undo:', engine.canUndo()); // true after making a choice
+
+// Undo the last action
+const undoResult = engine.undo();
+if (undoResult.success) {
+  console.log('Undid:', undoResult.description);
+  console.log('Can redo:', engine.canRedo()); // true
+}
+
+// Redo the undone action
+const redoResult = engine.redo();
+if (redoResult.success) {
+  console.log('Redid:', redoResult.description);
+}
+
+// Get history summary
+const history = engine.getHistorySummary();
+console.log(`History: ${history.undoCount} undo, ${history.redoCount} redo entries`);
+```
+
+**Advanced Configuration:**
+
+```typescript
+// Configure undo/redo system
+engine.configureUndoRedo({
+  maxUndoEntries: 100,    // Maximum undo operations to remember
+  maxRedoEntries: 50,     // Maximum redo operations to remember
+  enabled: true           // Enable/disable undo/redo tracking
+});
+
+// Configure autosave behavior
+engine.configureAutosave({
+  enabled: true,          // Enable/disable autosave
+  throttleMs: 100,        // Minimum time between saves (milliseconds)
+  events: ['choice', 'flag', 'load'] // Which events trigger autosave
+});
+
+// Manual autosave trigger
+await engine.autosave();
+
+// Clear all undo/redo history
+engine.clearHistory();
+```
+
+**Performance Guarantees:**
+- Undo operations: <1ms for normal state
+- Redo operations: <1ms for normal state
+- Autosave overhead: <1ms per operation
+- Memory efficient with configurable history limits
 
 ### Live Performance Monitoring
 
@@ -335,9 +635,198 @@ Creates:
 - package.json with QNCE dependencies
 - README with usage instructions
 
+### qnce-play
+
+Interactive narrative sessions with full undo/redo support:
+
+```bash
+qnce-play story.json
+```
+
+Features:
+- Real-time narrative playthrough
+- Instant undo/redo with `u` and `r` commands
+- State inspection and debugging
+- Performance monitoring
+- Session save/load functionality
+
 ## Integration Examples
 
-### React Hook
+### React Hooks
+
+QNCE provides comprehensive React hooks for seamless integration:
+
+```typescript
+import { useQNCE, useUndoRedo, useAutosave } from 'qnce-engine/react';
+import { DEMO_STORY } from 'qnce-engine';
+
+function NarrativeComponent() {
+  // Core narrative hook
+  const { engine, currentNode, choices, flags, selectChoice, resetNarrative } = useQNCE(DEMO_STORY);
+  
+  // Undo/redo functionality
+  const { 
+    undo, 
+    redo, 
+    canUndo, 
+    canRedo, 
+    undoCount, 
+    redoCount,
+    clearHistory 
+  } = useUndoRedo(engine);
+  
+  // Autosave status
+  const { isAutosaveEnabled, lastAutosave } = useAutosave(engine);
+
+  return (
+    <div>
+      <h2>Current Scene</h2>
+      <p>{currentNode.text}</p>
+      
+      <h3>Choices</h3>
+      {choices.map((choice, index) => (
+        <button key={index} onClick={() => selectChoice(choice)}>
+          {choice.text}
+        </button>
+      ))}
+      
+      <div className="controls">
+        <button onClick={undo} disabled={!canUndo}>
+          Undo ({undoCount})
+        </button>
+        <button onClick={redo} disabled={!canRedo}>
+          Redo ({redoCount})
+        </button>
+        <button onClick={resetNarrative}>Reset</button>
+        <button onClick={clearHistory}>Clear History</button>
+      </div>
+      
+      <div className="status">
+        <p>Autosave: {isAutosaveEnabled ? 'Enabled' : 'Disabled'}</p>
+        {lastAutosave && <p>Last saved: {lastAutosave.toLocaleTimeString()}</p>}
+      </div>
+      
+      <details>
+        <summary>Debug Info</summary>
+        <pre>{JSON.stringify(flags, null, 2)}</pre>
+      </details>
+    </div>
+  );
+}
+```
+
+### React UI Components
+
+QNCE provides pre-built React components for common UI patterns:
+
+#### UndoRedoControls Component
+
+A complete undo/redo control panel with accessibility features:
+
+```typescript
+import { UndoRedoControls } from 'qnce-engine/ui';
+import { createQNCEEngine } from 'qnce-engine';
+
+function MyApp() {
+  const engine = createQNCEEngine(DEMO_STORY);
+
+  return (
+    <div>
+      {/* Narrative content */}
+      
+      {/* Undo/Redo Controls */}
+      <UndoRedoControls 
+        engine={engine}
+        size="md"              // sm, md, lg
+        layout="horizontal"    // horizontal, vertical  
+        showLabels={true}      // Show text labels
+        labels={{              // Custom labels
+          undo: "Go Back",
+          redo: "Go Forward"
+        }}
+        onUndo={(result) => console.log('Undo:', result)}
+        onRedo={(result) => console.log('Redo:', result)}
+        theme={{               // Custom theming
+          colors: {
+            primary: '#007bff',
+            disabled: '#6c757d'
+          },
+          borderRadius: { md: '8px' }
+        }}
+      />
+    </div>
+  );
+}
+```
+
+#### AutosaveIndicator Component
+
+Visual indicator for autosave status with animations:
+
+```typescript
+import { AutosaveIndicator } from 'qnce-engine/ui';
+
+function MyApp() {
+  const engine = createQNCEEngine(DEMO_STORY);
+
+  return (
+    <div>
+      {/* Narrative content */}
+      
+      {/* Autosave Status */}
+      <AutosaveIndicator 
+        engine={engine}
+        variant="detailed"     // minimal, detailed, icon-only
+        position="top-right"   // inline, top-right, bottom-left, etc.
+        showTimestamp={true}   // Show last save time
+        autoHideDelay={3000}   // Auto-hide after 3 seconds
+        messages={{            // Custom messages
+          idle: "Ready to save",
+          saving: "Saving...",
+          saved: "All changes saved",
+          error: "Save failed"
+        }}
+        theme={{               // Custom theming
+          colors: {
+            success: '#28a745',
+            error: '#dc3545',
+            warning: '#ffc107'
+          }
+        }}
+      />
+    </div>
+  );
+}
+```
+
+#### Keyboard Shortcuts
+
+Built-in keyboard support with the `useKeyboardShortcuts` hook:
+
+```typescript
+import { useKeyboardShortcuts } from 'qnce-engine/ui';
+
+function MyApp() {
+  const engine = createQNCEEngine(DEMO_STORY);
+  
+  // Enable keyboard shortcuts
+  useKeyboardShortcuts(engine, {
+    undo: ['ctrl+z', 'cmd+z'],      // Undo shortcuts
+    redo: ['ctrl+y', 'cmd+shift+z'], // Redo shortcuts  
+    save: ['ctrl+s', 'cmd+s'],       // Manual save
+    disabled: false                  // Enable/disable all shortcuts
+  });
+
+  return (
+    <div>
+      {/* Your narrative UI */}
+      <p>Press Ctrl+Z to undo, Ctrl+Y to redo, Ctrl+S to save</p>
+    </div>
+  );
+}
+```
+
+### Basic React Hook (Legacy)
 
 ```typescript
 import { createQNCEEngine } from 'qnce-engine';
@@ -424,6 +913,12 @@ The repository includes comprehensive examples demonstrating all features:
 - **Features:** Complex narrative flows, conditional branching, analytics
 - **Story:** "The Mysterious Library" - Interactive mystery with multiple paths
 
+### 💾 Autosave & Undo Demo (NEW in v1.2.0)
+- **File:** `examples/autosave-undo-demo.ts`
+- **Features:** Autosave, undo/redo, performance monitoring, state management
+- **Run:** `npm run demo:autosave`
+- **Performance:** Demonstrates <1ms undo/redo with real-time metrics
+
 ### 🧪 Validation Scripts
 - **Real-world testing:** `scripts/validation-real-world.ts`
 - **Comprehensive testing:** `scripts/validation-comprehensive.ts`
@@ -432,6 +927,13 @@ The repository includes comprehensive examples demonstrating all features:
 # Run the quickstart example
 npm run build
 node dist/examples/branching-quickstart.js
+
+# Run the new autosave demo
+npm run demo:autosave
+
+# Try the interactive CLI tool
+npm run build
+qnce-play examples/demo-story.json
 
 # Run validation tests
 npm run build
