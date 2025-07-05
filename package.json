@@ -1,6 +1,6 @@
 {
   "name": "qnce-engine",
-  "version": "1.2.0",
+  "version": "1.3.0",
   "description": "Core QNCE (Quantum Narrative Convergence Engine) - Framework agnostic narrative engine with performance optimization",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
