@@ -120,17 +120,25 @@ export const UndoRedoControls: React.FC<UndoRedoControlsProps> = ({
   };
 
   // Handle button actions
-  const handleUndo = () => {
+  const handleUndo = async () => {
     if (!disabled && canUndo) {
-      undo();
-      onUndo?.();
+      try {
+        const result = await undo();
+        onUndo?.(result);
+      } catch (error) {
+        onUndo?.({ success: false, error: error instanceof Error ? error.message : 'Undo failed' });
+      }
     }
   };
 
-  const handleRedo = () => {
+  const handleRedo = async () => {
     if (!disabled && canRedo) {
-      redo();
-      onRedo?.();
+      try {
+        const result = await redo();
+        onRedo?.(result);
+      } catch (error) {
+        onRedo?.({ success: false, error: error instanceof Error ? error.message : 'Redo failed' });
+      }
     }
   };
 

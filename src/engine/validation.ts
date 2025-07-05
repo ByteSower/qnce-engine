@@ -311,7 +311,9 @@ export class DefaultChoiceValidator implements ChoiceValidator {
   }
 
   getAvailableChoices(context: ValidationContext): Choice[] {
-    return context.currentNode.choices.filter(choice => {
+    // Use the availableChoices from context (which may have been pre-filtered by conditions)
+    // instead of all choices from the node
+    return context.availableChoices.filter(choice => {
       const result = this.validate(choice, context);
       return result.isValid;
     });

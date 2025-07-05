@@ -10,6 +10,9 @@ module.exports = {
         '**/__tests__/**/*.ts',
         '**/?(*.)+(spec|test).ts'
       ],
+      testPathIgnorePatterns: [
+        '<rootDir>/src/ui/'
+      ],
       transform: {
         '^.+\\.ts$': 'ts-jest',
       },
@@ -17,7 +20,7 @@ module.exports = {
         'src/**/*.ts',
         '!src/**/*.d.ts',
         '!src/cli/**/*.ts',
-        '!src/ui/**/*' // Exclude UI from Node tests
+        '!src/ui/**'
       ],
       setupFilesAfterEnv: ['<rootDir>/tests/setup.ts']
     },
@@ -44,7 +47,7 @@ module.exports = {
       collectCoverageFrom: [
         'src/ui/**/*.{ts,tsx}',
         '!src/ui/**/*.d.ts',
-        '!src/ui/__tests__/**/*'
+        '!src/ui/__tests__/**'
       ]
     }
   ],

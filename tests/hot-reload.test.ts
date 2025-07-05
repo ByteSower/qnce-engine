@@ -1,6 +1,6 @@
 import { describe, test, expect, beforeEach } from '@jest/globals';
-import { StoryDeltaComparator, StoryDeltaPatcher, createDeltaTools } from '../src/performance/HotReloadDelta';
-import { createQNCEEngine } from '../src/engine/core';
+import { StoryDeltaComparator, StoryDeltaPatcher, NodeDelta, StoryDelta, createDeltaTools } from '../src/performance/HotReloadDelta';
+import { createQNCEEngine, NarrativeNode } from '../src/engine/core';
 
 describe('Hot-Reload Delta Patching (S2-T3)', () => {
   let comparator: StoryDeltaComparator;
@@ -12,12 +12,14 @@ describe('Hot-Reload Delta Patching (S2-T3)', () => {
   describe('Delta Comparison', () => {
     test('should detect added nodes', () => {
       const oldStory = {
+        initialNodeId: 'start',
         nodes: [
           { id: 'start', text: 'Beginning', choices: [] }
         ]
       };
       
       const newStory = {
+        initialNodeId: 'start',
         nodes: [
           { id: 'start', text: 'Beginning', choices: [] },
           { id: 'new_node', text: 'New content', choices: [] }
@@ -29,11 +31,12 @@ describe('Hot-Reload Delta Patching (S2-T3)', () => {
       expect(delta.nodeChanges).toHaveLength(1);
       expect(delta.nodeChanges[0].changeType).toBe('added');
       expect(delta.nodeChanges[0].nodeId).toBe('new_node');
-      expect(delta.nodeChanges[0].affectedFields).toEqual(['*']);
+      expect(delta.nodeChanges[0].affectedFields).toEqual(['*'] as (keyof NarrativeNode | '*')[]);
     });
 
     test('should detect removed nodes', () => {
       const oldStory = {
+        initialNodeId: 'start',
         nodes: [
           { id: 'start', text: 'Beginning', choices: [] },
           { id: 'removed_node', text: 'Will be removed', choices: [] }
@@ -41,6 +44,7 @@ describe('Hot-Reload Delta Patching (S2-T3)', () => {
       };
       
       const newStory = {
+        initialNodeId: 'start',
         nodes: [
           { id: 'start', text: 'Beginning', choices: [] }
         ]
@@ -55,6 +59,7 @@ describe('Hot-Reload Delta Patching (S2-T3)', () => {
 
     test('should detect modified nodes with specific field changes', () => {
       const oldStory = {
+        initialNodeId: 'start',
         nodes: [
           { 
             id: 'start', 
@@ -65,6 +70,7 @@ describe('Hot-Reload Delta Patching (S2-T3)', () => {
       };
       
       const newStory = {
+        initialNodeId: 'start',
         nodes: [
           { 
             id: 'start', 
@@ -79,11 +85,12 @@ describe('Hot-Reload Delta Patching (S2-T3)', () => {
       expect(delta.nodeChanges).toHaveLength(1);
       expect(delta.nodeChanges[0].changeType).toBe('modified');
       expect(delta.nodeChanges[0].nodeId).toBe('start');
-      expect(delta.nodeChanges[0].affectedFields).toEqual(['text']);
+      expect(delta.nodeChanges[0].affectedFields).toEqual(['text'] as (keyof NarrativeNode | '*')[]);
     });
 
     test('should detect multiple field changes', () => {
       const oldStory = {
+        initialNodeId: 'start',
         nodes: [
           { 
             id: 'start', 
@@ -94,6 +101,7 @@ describe('Hot-Reload Delta Patching (S2-T3)', () => {
       };
       
       const newStory = {
+        initialNodeId: 'start',
         nodes: [
           { 
             id: 'start', 
@@ -113,6 +121,7 @@ describe('Hot-Reload Delta Patching (S2-T3)', () => {
 
     test('should ignore identical stories', () => {
       const story = {
+        initialNodeId: 'start',
         nodes: [
           { id: 'start', text: 'Same text', choices: [] }
         ]
@@ -137,7 +146,7 @@ describe('Hot-Reload Delta Patching (S2-T3)', () => {
       const engine = createQNCEEngine(initialStory);
       const patcher = new StoryDeltaPatcher(engine);
       
-      const delta = {
+      const delta: StoryDelta = {
         nodeChanges: [{
           nodeId: 'new_node',
           changeType: 'added' as const,
@@ -171,7 +180,7 @@ describe('Hot-Reload Delta Patching (S2-T3)', () => {
       const engine = createQNCEEngine(initialStory);
       const patcher = new StoryDeltaPatcher(engine);
       
-      const delta = {
+      const delta: StoryDelta = {
         nodeChanges: [{
           nodeId: 'start',
           changeType: 'modified' as const,
@@ -204,7 +213,7 @@ describe('Hot-Reload Delta Patching (S2-T3)', () => {
       const engine = createQNCEEngine(initialStory);
       const patcher = new StoryDeltaPatcher(engine);
       
-      const delta = {
+      const delta: StoryDelta = {
         nodeChanges: [{
           nodeId: 'start',
           changeType: 'removed' as const,
@@ -233,14 +242,14 @@ describe('Hot-Reload Delta Patching (S2-T3)', () => {
       const patcher = new StoryDeltaPatcher(engine);
       
       // Create large delta with many node additions
-      const nodeChanges = Array.from({ length: 100 }, (_, i) => ({
+      const nodeChanges: NodeDelta[] = Array.from({ length: 100 }, (_, i) => ({
         nodeId: `node_${i}`,
         changeType: 'added' as const,
         newNode: { id: `node_${i}`, text: `Content ${i}`, choices: [] },
         affectedFields: ['*']
       }));
       
-      const delta = {
+      const delta: StoryDelta = {
         nodeChanges,
         assetChanges: [],
         timestamp: Date.now()

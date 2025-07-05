@@ -86,7 +86,11 @@ export function useKeyboardShortcuts(
     for (const combo of bindings.undo || []) {
       if (matchesKeyCombo(keyboardEvent, combo)) {
         if (engine.canUndo()) {
-          engine.undo();
+          try {
+            engine.undo();
+          } catch (error) {
+            console.error('[QNCE] Undo failed:', error);
+          }
           handled = true;
           break;
         }
@@ -98,7 +102,11 @@ export function useKeyboardShortcuts(
       for (const combo of bindings.redo || []) {
         if (matchesKeyCombo(keyboardEvent, combo)) {
           if (engine.canRedo()) {
-            engine.redo();
+            try {
+              engine.redo();
+            } catch (error) {
+              console.error('[QNCE] Redo failed:', error);
+            }
             handled = true;
             break;
           }
@@ -125,7 +133,11 @@ export function useKeyboardShortcuts(
         if (matchesKeyCombo(keyboardEvent, combo)) {
           // Add confirmation for reset to prevent accidental data loss
           if (window.confirm('Are you sure you want to reset the narrative? This will lose all progress.')) {
-            engine.resetNarrative();
+            try {
+              engine.resetNarrative();
+            } catch (error) {
+              console.error('[QNCE] Reset failed:', error);
+            }
             handled = true;
             break;
           }

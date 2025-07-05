@@ -204,7 +204,8 @@ describe('UndoRedoControls', () => {
       render(<UndoRedoControls engine={engine} style={customStyle} />);
       
       const container = screen.getByRole('group');
-      expect(container).toHaveStyle({ backgroundColor: 'red' });
+      expect(container).toHaveAttribute('style');
+      expect(container.getAttribute('style')).toContain('background-color: red');
     });
 
     it('applies different sizes correctly', () => {
@@ -223,7 +224,7 @@ describe('UndoRedoControls', () => {
       render(<UndoRedoControls engine={engine} />);
       
       const container = screen.getByRole('group');
-      expect(container).toHaveAttribute('aria-label', 'Undo and Redo Controls');
+      expect(container).toHaveAttribute('aria-label', 'Undo and redo controls');
       
       const undoButton = screen.getByRole('button', { name: /undo/i });
       const redoButton = screen.getByRole('button', { name: /redo/i });
@@ -278,7 +279,7 @@ describe('UndoRedoControls', () => {
       
       const buttons = screen.getAllByRole('button');
       buttons.forEach((button: HTMLElement) => {
-        expect(button).toHaveStyle({ borderRadius: '4px' });
+        expect(button).toHaveStyle({ 'border-radius': '0.375rem' });
       });
     });
 

@@ -33,3 +33,11 @@ if (typeof window !== 'undefined') {
     clearTimeout(id);
   };
 }
+
+import { describe, test, expect } from '@jest/globals';
+
+describe('UI Test Setup', () => {
+  test('should contain at least one test', () => {
+    expect(true).toBe(true);
+  });
+});

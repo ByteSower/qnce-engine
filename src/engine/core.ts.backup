@@ -9,21 +9,7 @@ import { perf, getPerfReporter } from '../performance/PerfReporter';
 import { QNCEBranchingEngine, createBranchingEngine } from '../narrative/branching';
 import { QNCEStory } from '../narrative/branching/models';
 
-// Choice validation system - Sprint 3.2
-import { 
-  ChoiceValidator, 
-  createChoiceValidator, 
-  createValidationContext,
-  ValidationResult
-} from './validation';
-import { 
-  QNCENavigationError, 
-  ChoiceValidationError
-} from './errors';
-
-// Re-export error classes for backward compatibility
-export { QNCENavigationError, ChoiceValidationError } from './errors';
-
+<<<<<<< HEAD
 // State persistence imports - Sprint 3.3
 import { 
   SerializedState, 
@@ -57,13 +43,33 @@ import {
   AutosaveEvent,
   UndoRedoEvent
 } from './types';
+=======
+// Choice validation system
+import { 
+  ChoiceValidator, 
+  createChoiceValidator, 
+  createValidationContext,
+  ValidationResult
+} from './validation';
+import { 
+  QNCENavigationError, 
+  ChoiceValidationError
+} from './errors';
 
+// Re-export error classes for backward compatibility
+export { QNCENavigationError, ChoiceValidationError } from './errors';
+>>>>>>> feature/sprint3-choice-validation
+
+// QNCE Data Models
 export interface Choice {
   text: string;
   nextNodeId: string;
   flagEffects?: Record<string, unknown>;
+<<<<<<< HEAD
   
   // Sprint 3.2: Validation properties
+=======
+>>>>>>> feature/sprint3-choice-validation
   flagRequirements?: Record<string, unknown>;
   timeRequirements?: {
     minTime?: number;
@@ -73,9 +79,12 @@ export interface Choice {
   };
   inventoryRequirements?: Record<string, number>;
   enabled?: boolean;
+<<<<<<< HEAD
   
   // Sprint 3.4: Conditional choice display
   condition?: string; // Expression string for choice visibility (e.g., "flags.curiosity >= 3 && !flags.seenEnding")
+=======
+>>>>>>> feature/sprint3-choice-validation
 }
 
 export interface NarrativeNode {
@@ -124,7 +133,7 @@ export class QNCEEngine {
   private performanceMode: boolean = false;
   private enableProfiling: boolean = false;
   private branchingEngine?: QNCEBranchingEngine;
-  private choiceValidator: ChoiceValidator; // Sprint 3.2: Choice validation
+<<<<<<< HEAD
   
   // Sprint 3.3: State persistence and checkpoints
   private checkpoints: Map<string, Checkpoint> = new Map();
@@ -154,6 +163,8 @@ export class QNCEEngine {
   };
   private lastAutosaveTime: number = 0;
   private isUndoRedoOperation: boolean = false;
+=======
+  private choiceValidator: ChoiceValidator; // Sprint 3.2: Choice validation
 
   public get flags(): Record<string, unknown> {
     return this.state.flags;
@@ -170,6 +181,7 @@ export class QNCEEngine {
       return true; // If current node not found, consider it complete
     }
   }
+>>>>>>> feature/sprint3-choice-validation
 
   constructor(
     storyData: StoryData, 
@@ -273,52 +285,19 @@ export class QNCEEngine {
   }
 
   /**
-   * Get available choices from the current node with validation and conditional filtering
+   * Get available choices from the current node
    * @returns Array of available choices
    */
   getAvailableChoices(): Choice[] {
+    // Sprint 3.2: Use choice validator for consistent validation logic
     const currentNode = this.getCurrentNode();
-    const context: ConditionContext = {
-      state: this.state,
-      timestamp: Date.now(),
-      customData: {}
-    };
-
-    // First apply conditional filtering (Sprint 3.4)
-    const conditionallyAvailable = currentNode.choices.filter((choice) => {
-      // If no condition is specified, choice is always available
-      if (!choice.condition) {
-        return true;
-      }
-
-      try {
-        // Evaluate the condition using the condition evaluator
-        return conditionEvaluator.evaluate(choice.condition, context);
-      } catch (error) {
-        // Log condition evaluation errors but don't block other choices
-        if (error instanceof ConditionEvaluationError) {
-          console.warn(`[QNCE] Choice condition evaluation failed: ${error.message}`, {
-            choiceText: choice.text,
-            condition: choice.condition,
-            nodeId: this.state.currentNodeId
-          });
-        } else {
-          console.warn(`[QNCE] Unexpected error evaluating choice condition:`, error);
-        }
-        
-        // Return false for invalid conditions (choice won't be shown)
-        return false;
-      }
-    });
-
-    // Then apply choice validation (Sprint 3.2)
-    const validationContext = createValidationContext(
+    const context = createValidationContext(
       currentNode,
       this.state,
-      conditionallyAvailable  // Pass the conditionally filtered choices
+      currentNode.choices
     );
     
-    return this.choiceValidator.getAvailableChoices(validationContext);
+    return this.choiceValidator.getAvailableChoices(context);
   }
 
   makeChoice(choiceIndex: number): void {
@@ -862,7 +841,42 @@ export class QNCEEngine {
     return this.state.flags[flagName] === expectedValue;
   }
 
+<<<<<<< HEAD
+  // Get available choices (with conditional filtering)
+  getAvailableChoices(): Choice[] {
+    const currentNode = this.getCurrentNode();
+    const context: ConditionContext = {
+      state: this.state,
+      timestamp: Date.now(),
+      customData: {}
+    };
 
+    return currentNode.choices.filter((choice) => {
+      // If no condition is specified, choice is always available
+      if (!choice.condition) {
+        return true;
+      }
+
+      try {
+        // Evaluate the condition using the condition evaluator
+        return conditionEvaluator.evaluate(choice.condition, context);
+      } catch (error) {
+        // Log condition evaluation errors but don't block other choices
+        if (error instanceof ConditionEvaluationError) {
+          console.warn(`[QNCE] Choice condition evaluation failed: ${error.message}`, {
+            choiceText: choice.text,
+            condition: choice.condition,
+            nodeId: this.state.currentNodeId
+          });
+        } else {
+          console.warn(`[QNCE] Unexpected error evaluating choice condition:`, error);
+        }
+        
+        // Return false for invalid conditions (choice won't be shown)
+        return false;
+      }
+    });
+=======
   // Sprint 3.2: Choice Validation Methods
   
   /**
@@ -898,7 +912,7 @@ export class QNCEEngine {
   isChoiceValid(choice: Choice): boolean {
     const result = this.validateChoice(choice);
     return result.isValid;
-
+>>>>>>> feature/sprint3-choice-validation
   }
 
   // Performance and object pooling methods

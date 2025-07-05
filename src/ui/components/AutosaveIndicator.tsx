@@ -27,15 +27,26 @@ export const AutosaveIndicator: React.FC<AutosaveIndicatorProps> = ({
     idle: 'Auto-save ready',
     saving: 'Saving...',
     saved: 'Saved',
-    error: 'Save failed'
+    error: 'Save failed',
+    disabled: 'Autosave disabled'
   },
   showTimestamp = true,
   autoHideDelay = 3000
 }) => {
   const { isEnabled, lastAutosave, isSaving } = useAutosave(engine);
-  const [status, setStatus] = useState<AutosaveStatus>('idle');
   const [visible, setVisible] = useState(true);
   const [isAnimating, setIsAnimating] = useState(false);
+  const [lastSaveSuccessful, setLastSaveSuccessful] = useState(true);
+
+  // Determine status based on hook values
+  const status: AutosaveStatus = useMemo(() => {
+    if (!isEnabled) return 'disabled';
+    if (isSaving) return 'saving';
+    if (lastAutosave && !isSaving) {
+      return lastSaveSuccessful ? 'saved' : 'error';
+    }
+    return 'idle';
+  }, [isEnabled, isSaving, lastAutosave, lastSaveSuccessful]);
 
   // Merge custom theme with default theme
   const theme: QNCETheme = useMemo(() => ({
@@ -53,44 +64,22 @@ export const AutosaveIndicator: React.FC<AutosaveIndicatorProps> = ({
     shadows: { ...defaultTheme.shadows, ...customTheme?.shadows }
   }), [customTheme]);
 
-  // Monitor engine autosave events
+  // Auto-hide logic for saved status
   useEffect(() => {
-    if (!engine) return;
+    setVisible(true);
+    
+    if (status === 'saved' && autoHideDelay > 0) {
+      const hideTimer = setTimeout(() => {
+        setVisible(false);
+      }, autoHideDelay);
+      
+      return () => clearTimeout(hideTimer);
+    }
+  }, [status, autoHideDelay]);
 
-    // Simulate autosave status changes based on engine activity
-    // In a real implementation, this would listen to engine events
-    const handleAutosave = () => {
-      setStatus('saving');
-      setIsAnimating(true);
-      setVisible(true);
-
-      // Simulate save completion
-      setTimeout(() => {
-        setStatus('saved');
-        setIsAnimating(false);
-
-        // Auto-hide after successful save
-        if (autoHideDelay > 0) {
-          setTimeout(() => {
-            setVisible(false);
-          }, autoHideDelay);
-        }
-      }, 500); // Simulate save duration
-    };
-
-    // Listen for choice selections (which trigger autosave)
-    const originalSelectChoice = engine.selectChoice.bind(engine);
-    engine.selectChoice = (choice) => {
-      if (isEnabled) {
-        handleAutosave();
-      }
-      return originalSelectChoice(choice);
-    };
-
-    return () => {
-      // Cleanup would go here in a real implementation
-    };
-  }, [engine, isEnabled, autoHideDelay]);
+  useEffect(() => {
+    setIsAnimating(isSaving);
+  }, [isSaving]);
 
   // Position styles
   const getPositionStyles = (): React.CSSProperties => {
@@ -194,8 +183,10 @@ export const AutosaveIndicator: React.FC<AutosaveIndicatorProps> = ({
     opacity: 0.8
   };
 
-  // Don't render if autosave is disabled
-  if (!isEnabled && status === 'idle') {
+  // Show disabled state when autosave is disabled, otherwise don't render
+  if (!isEnabled && status === 'disabled') {
+    // Render disabled state
+  } else if (!isEnabled) {
     return null;
   }
 
@@ -216,19 +207,22 @@ export const AutosaveIndicator: React.FC<AutosaveIndicatorProps> = ({
         style={containerStyle}
         role="status"
         aria-live="polite"
-        aria-label={`Autosave status: ${messages[status]}`}
+        aria-label={`Autosave status: ${messages[status as keyof typeof messages] ?? status}`}
       >
         <StatusIcon status={status} />
-        
         {variant !== 'icon-only' && (
           <>
             <span style={textStyle}>
-              {messages[status]}
+              {messages[status as keyof typeof messages] ?? status}
             </span>
-            
-            {showTimestamp && lastAutosave && status === 'saved' && (
+            {showTimestamp && lastAutosave && (
               <span style={timestampStyle}>
                 {formatTimestamp(lastAutosave)}
+              </span>
+            )}
+            {showTimestamp && !lastAutosave && (
+              <span style={timestampStyle}>
+                Never
               </span>
             )}
           </>

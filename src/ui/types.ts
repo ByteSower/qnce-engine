@@ -74,15 +74,15 @@ export interface UndoRedoControlsProps {
   /** Button layout */
   layout?: 'horizontal' | 'vertical';
   /** Callback when undo is performed */
-  onUndo?: () => void;
+  onUndo?: (result: { success: boolean; description?: string; error?: string }) => void;
   /** Callback when redo is performed */
-  onRedo?: () => void;
+  onRedo?: (result: { success: boolean; description?: string; error?: string }) => void;
 }
 
 /**
  * Autosave status
  */
-export type AutosaveStatus = 'idle' | 'saving' | 'saved' | 'error';
+export type AutosaveStatus = 'idle' | 'saving' | 'saved' | 'error' | 'disabled';
 
 /**
  * Props for AutosaveIndicator component
