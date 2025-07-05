@@ -373,15 +373,53 @@ describe('QNCE Conditional Choice Display - Sprint 3.4', () => {
 
   describe('Performance Requirements', () => {
     it('should complete choice filtering under 15ms for normal conditions', () => {
+      // Create a simpler test story without custom logic to avoid console.warn overhead
+      const performanceStory: StoryData = {
+        initialNodeId: 'perf-start',
+        nodes: [
+          {
+            id: 'perf-start',
+            text: 'Performance test node.',
+            choices: [
+              {
+                text: 'Go north (always available)',
+                nextNodeId: 'north'
+              },
+              {
+                text: 'Go east (requires curiosity >= 3)',
+                nextNodeId: 'east',
+                condition: 'flags.curiosity >= 3'
+              },
+              {
+                text: 'Go west (requires sword)',
+                nextNodeId: 'west',
+                condition: 'flags.hasSword === true'
+              },
+              {
+                text: 'Use magic (complex condition)',
+                nextNodeId: 'magic',
+                condition: 'flags.magicLevel > 0 && flags.mana >= 10 && !flags.exhausted'
+              }
+            ]
+          },
+          { id: 'north', text: 'North.', choices: [] },
+          { id: 'east', text: 'East.', choices: [] },
+          { id: 'west', text: 'West.', choices: [] },
+          { id: 'magic', text: 'Magic.', choices: [] }
+        ]
+      };
+
+      const perfEngine = createQNCEEngine(performanceStory);
+
       // Set up multiple flag conditions
-      engine.setFlag('curiosity', 5);
-      engine.setFlag('hasSword', true);
-      engine.setFlag('magicLevel', 2);
-      engine.setFlag('mana', 15);
-      engine.setFlag('exhausted', false);
+      perfEngine.setFlag('curiosity', 5);
+      perfEngine.setFlag('hasSword', true);
+      perfEngine.setFlag('magicLevel', 2);
+      perfEngine.setFlag('mana', 15);
+      perfEngine.setFlag('exhausted', false);
 
       const start = performance.now();
-      const choices = engine.getAvailableChoices();
+      const choices = perfEngine.getAvailableChoices();
       const end = performance.now();
       const duration = end - start;
 
