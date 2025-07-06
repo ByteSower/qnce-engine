@@ -34,9 +34,13 @@ gc-pooling-results.json
 benchmark-*.json
 
 # Internal documentation (keep local for development)
-docs/sprint_*/BRAIN_REVIEW_REPORT.md
-docs/sprint_*/BYTESOWER_VALIDATION_REPORT.md
-docs/sprint_*/INTERNAL_*.md
+docs/sprint_*/
+docs/branching/PDM.md
+docs/branching/RELEASE-*.md
+docs/collaboration/
+docs/*/BRAIN_REVIEW_REPORT.md
+docs/*/BYTESOWER_VALIDATION_REPORT.md
+docs/*/INTERNAL_*.md
 
 # Development utilities
 test-package.js

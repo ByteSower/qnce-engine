@@ -1,5 +1,5 @@
 // Performance Spot-Check for Branching API (JavaScript version)
-// Brain's validation script for 3 chapters, 2 branch points per chapter
+// Performance validation script for 3 chapters, 2 branch points per chapter
 
 const { createBranchingEngine } = require('../dist/narrative/branching/engine-simple');
 
@@ -9,7 +9,7 @@ const createPerformanceTestStory = () => ({
   title: 'Performance Test Story',
   version: '1.0.0',
   metadata: {
-    author: 'Brain Test',
+    author: 'QNCE Performance Test',
     description: 'Performance validation story',
     tags: ['performance', 'test'],
     createDate: new Date(),
@@ -185,7 +185,7 @@ async function runPerformanceSpotCheck() {
   console.log(`\nOverall Result: ${allTestsPass ? '✅ ALL TESTS PASS' : '❌ SOME TESTS FAILED'}`);
   
   if (allTestsPass) {
-    console.log('\n🚀 Ready for Brain\'s approval and production integration!');
+    console.log('\n🚀 Ready for validation and production integration!');
   } else {
     console.log('\n⚠️ Performance optimization needed before merge.');
   }

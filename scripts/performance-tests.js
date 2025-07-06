@@ -1,13 +1,13 @@
 #!/usr/bin/env node
 
-// Performance testing script for QNCE Engine - Brain's Sprint #1 Metrics
+// Performance testing script for QNCE Engine - Production Quality Metrics
 const { createQNCEEngine } = require('../dist/index.js');
 const { performance } = require('perf_hooks');
 const { writeFileSync } = require('fs');
 
 console.log('🎯 QNCE Engine Performance Testing - Sprint #1');
 console.log('='.repeat(50));
-console.log('Testing Brain\'s performance requirements:');
+console.log('Testing production performance requirements:');
 console.log('• Flow-Switch Latency: Target ≤20ms');
 console.log('• State Transition Time: Target ≤5ms');
 console.log('• Cache Hit Rate: Target ≥95%');
@@ -68,7 +68,7 @@ const metrics = {
   errorRate: { calls: 0, errors: 0 }
 };
 
-// Test configuration based on Brain's requirements
+// Test configuration based on production requirements
 const config = {
   iterations: 1000,
   flows: 5, // "5 flows" as specified
