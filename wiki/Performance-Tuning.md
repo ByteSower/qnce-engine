@@ -4,7 +4,7 @@ This guide covers performance optimization techniques for QNCE Engine, including
 
 ## ⚡ Overview
 
-QNCE Engine v1.2.0 introduces enterprise-grade performance infrastructure designed to handle large-scale interactive narratives with minimal latency and memory usage.
+QNCE Engine v1.2.1 introduces enterprise-grade performance infrastructure designed to handle large-scale interactive narratives with minimal latency and memory usage.
 
 ### Performance Targets
 

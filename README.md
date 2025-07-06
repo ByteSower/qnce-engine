@@ -2,7 +2,7 @@
 
 **Quantum Narrative Convergence Engine** - A framework-agnostic TypeScript library for creating interactive narrative experiences with quantum-inspired mechanics.
 
-> **🚀 NEW in v1.2.0:** Complete state persistence, advanced branching with AI integration, autosave & undo/redo system, conditional choice display, and comprehensive UI components with React integration.
+> **🚀 Latest v1.2.1:** Complete state persistence, advanced branching with AI integration, autosave & undo/redo system, conditional choice display, and comprehensive UI components with React integration.
 
 [![npm version](https://badge.fury.io/js/qnce-engine.svg)](https://badge.fury.io/js/qnce-engine)
 [![TypeScript](https://img.shields.io/badge/TypeScript-Ready-blue.svg)](https://www.typescriptlang.org/)
@@ -14,7 +14,7 @@
 - **Collapse:** Player choices "collapse" the narrative to a specific path, updating state and flags
 - **Entanglement:** Early decisions affect later outcomes, enabling complex, interconnected stories
 
-## ✨ What's New in v1.2.0
+## ✨ Current Features (v1.2.1)
 
 ### 💾 State Persistence & Checkpoints
 - **Complete save/load system** with data integrity validation
@@ -348,7 +348,7 @@ console.log('Restored to checkpoint:', engine.getCurrentNode().text);
 
 ### 🔄 Autosave & Undo/Redo System
 
-QNCE Engine v1.2.0 introduces an advanced autosave and undo/redo system that automatically tracks state changes and provides instant rollback capabilities with sub-millisecond performance.
+QNCE Engine v1.2.1 introduces an advanced autosave and undo/redo system that automatically tracks state changes and provides instant rollback capabilities with sub-millisecond performance.
 
 **Key Features:**
 - **Automatic State Tracking:** Intelligently captures state snapshots on key events (choice selection, flag changes, state loading)
@@ -677,7 +677,7 @@ Features:
 
 ### qnce-perf
 
-**NEW in v1.2.0:** Real-time performance monitoring and analytics:
+**Current in v1.2.1:** Real-time performance monitoring and analytics:
 
 ```bash
 # Launch interactive performance dashboard
@@ -990,7 +990,7 @@ The repository includes comprehensive examples demonstrating all features:
 - **Features:** Complex narrative flows, conditional branching, analytics
 - **Story:** "The Mysterious Library" - Interactive mystery with multiple paths
 
-### 💾 Autosave & Undo Demo (NEW in v1.2.0)
+### 💾 Autosave & Undo Demo (Available in v1.2.1)
 - **File:** `examples/autosave-undo-demo.ts`
 - **Features:** Autosave, undo/redo, performance monitoring, state management
 - **Run:** `npm run demo:autosave`
