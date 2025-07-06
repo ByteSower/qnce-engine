@@ -675,4 +675,4 @@ wait $APP_PID
 
 ---
 
-*This documentation is maintained for QNCE Engine v1.2.1 with complete advanced feature set including Choice Validation, State Persistence, Conditional Choices, Autosave & Undo/Redo, and UI Components.*
+*This documentation is maintained for QNCE Engine v1.2.2 with complete advanced feature set including Choice Validation, State Persistence, Conditional Choices, Autosave & Undo/Redo, and UI Components.*

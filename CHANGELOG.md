@@ -5,7 +5,22 @@ All notable changes to the QNCE Engine will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-**📌 Current Version: [1.2.1] - 2025-07-05**
+**📌 Current Version: [1.2.2] - 2025-07-05**
+
+## [1.2.2] - 2025-07-05
+
+### Security 🔒
+
+- **Repository Security Audit** - Comprehensive security review and cleanup of public repository
+- **Professional Metadata** - Updated package author and maintainer information to professional standards
+- **Documentation Sanitization** - Removed internal development processes and team-specific references
+- **Enhanced Protection** - Improved .gitignore patterns to prevent future sensitive file exposure
+
+### Repository Cleanup 🧹
+
+- **Removed Internal Files** - Eliminated chat logs, process documents, and internal development documentation
+- **Standardized Attributions** - Updated all script and code attributions to professional standards
+- **Clean Public Presentation** - Ensured all public-facing content maintains professional quality
 
 ## [1.2.1] - 2025-07-05
 

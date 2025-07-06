@@ -2,7 +2,32 @@
 
 Complete version history and migration guides for QNCE Engine.
 
-## 🔧 Version 1.2.1 - Documentation & Compatibility Update
+## � Version 1.2.2 - Security & Professional Standards Update
+
+**Release Date:** July 5, 2025  
+**NPM:** `npm install qnce-engine@1.2.2`
+
+### 🔐 Security Improvements
+
+- **Complete Repository Security Audit** - Comprehensive review and cleanup of all public repository content
+- **Professional Metadata Standards** - Updated NPM package information to maintain professional presentation
+- **Enhanced Privacy Protection** - Improved .gitignore patterns to prevent future sensitive file exposure
+
+### 🧹 Repository Cleanup
+
+- **Documentation Sanitization** - Removed internal development processes and team-specific references
+- **Code Attribution Standards** - Updated all script and code attributions to professional standards
+- **Public Content Quality** - Ensured all public-facing content maintains enterprise-level quality
+
+### 📦 Migration from v1.2.2
+
+No breaking changes or API modifications. This is a metadata and security update:
+
+```bash
+npm update qnce-engine
+```
+
+## �🔧 Version 1.2.1 - Documentation & Compatibility Update
 
 **Released:** July 5, 2025  
 **NPM:** `npm install qnce-engine@1.2.1`
@@ -446,7 +471,7 @@ qnce-perf monitor story.json
 #### Minor Issues
 - **Hot-reload performance warning:** In very large stories (2000+ nodes), hot-reload may occasionally exceed the 2ms target. This doesn't affect functionality but may trigger performance warnings.
   - **Workaround:** Increase performance warning threshold in development
-  - **Fix planned:** v1.2.1
+  - **Fix planned:** v1.2.2
 
 #### Compatibility Notes
 - **Node.js 14:** While not officially supported, basic functionality works on Node.js 14. Node.js 16+ recommended for full feature support.
@@ -520,4 +545,4 @@ Special thanks to all contributors, beta testers, and the community for making Q
 
 ---
 
-*This documentation is maintained for QNCE Engine v1.2.1 with complete advanced feature set including Choice Validation, State Persistence, Conditional Choices, Autosave & Undo/Redo, and UI Components.*
+*This documentation is maintained for QNCE Engine v1.2.2 with complete advanced feature set including Choice Validation, State Persistence, Conditional Choices, Autosave & Undo/Redo, and UI Components.*

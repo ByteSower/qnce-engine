@@ -551,4 +551,4 @@ function migrateToBranching(basicStory: BasicQNCEStory): QNCEStory {
 
 ---
 
-*This documentation is maintained for QNCE Engine v1.2.1 with advanced feature set including Choice Validation, State Persistence, Conditional Choices, Autosave & Undo/Redo, and UI Components.*
+*This documentation is maintained for QNCE Engine v1.2.2 with advanced feature set including Choice Validation, State Persistence, Conditional Choices, Autosave & Undo/Redo, and UI Components.*
