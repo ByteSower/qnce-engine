@@ -506,6 +506,18 @@ Special thanks to all contributors, beta testers, and the community for making Q
 
 [Get Started →](Getting-Started) | [View Examples →](https://github.com/ByteSower/qnce-engine/tree/main/examples) | [Join Community →](https://github.com/ByteSower/qnce-engine/discussions)
 
-*Built with ❤️ by the ByteSower team*
+*Built with ❤️ by the QNCE development team*
 
 </div>
+
+---
+
+## 📍 Wiki Navigation
+
+**← Previous:** [Contributing](Contributing) | **You are here:** Release Notes
+
+**All Pages:** [Home](Home) • [Getting Started](Getting-Started) • [Branching Guide](Branching-Guide) • [Performance Tuning](Performance-Tuning) • [CLI Usage](CLI-Usage) • [API Reference](API-Reference) • [Contributing](Contributing) • **Release Notes**
+
+---
+
+*This documentation is maintained for QNCE Engine v1.2.1 with complete advanced feature set including Choice Validation, State Persistence, Conditional Choices, Autosave & Undo/Redo, and UI Components.*

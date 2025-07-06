@@ -658,3 +658,7 @@ We encourage experienced contributors to mentor newcomers:
 **← Previous:** [API Reference](API-Reference) | **You are here:** Contributing | **Next:** [Release Notes →](Release-Notes)
 
 **All Pages:** [Home](Home) • [Getting Started](Getting-Started) • [Branching Guide](Branching-Guide) • [Performance Tuning](Performance-Tuning) • [CLI Usage](CLI-Usage) • [API Reference](API-Reference) • **Contributing** • [Release Notes](Release-Notes)
+
+---
+
+*This documentation is maintained for QNCE Engine v1.2.1 with complete advanced feature set including Choice Validation, State Persistence, Conditional Choices, Autosave & Undo/Redo, and UI Components.*

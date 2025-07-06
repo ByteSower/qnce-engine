@@ -675,8 +675,4 @@ wait $APP_PID
 
 ---
 
-## 📍 Wiki Navigation
-
-**← Previous:** [Performance Tuning](Performance-Tuning) | **You are here:** CLI Usage | **Next:** [API Reference →](API-Reference)
-
-**All Pages:** [Home](Home) • [Getting Started](Getting-Started) • [Branching Guide](Branching-Guide) • [Performance Tuning](Performance-Tuning) • **CLI Usage** • [API Reference](API-Reference) • [Contributing](Contributing) • [Release Notes](Release-Notes)
+*This documentation is maintained for QNCE Engine v1.2.1 with complete advanced feature set including Choice Validation, State Persistence, Conditional Choices, Autosave & Undo/Redo, and UI Components.*
