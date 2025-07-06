@@ -2,6 +2,30 @@
 
 Complete version history and migration guides for QNCE Engine.
 
+## 🔧 Version 1.2.1 - Documentation & Compatibility Update
+
+**Released:** July 5, 2025  
+**NPM:** `npm install qnce-engine@1.2.1`
+
+### 🐛 Bug Fixes & Improvements
+
+#### TypeScript Compatibility
+- **Fixed Set spread operator** in condition.ts for better cross-environment compatibility
+- **Enhanced package metadata** with correct homepage and bugs URLs
+
+#### 📚 Complete Documentation Overhaul
+- **React UI Components**: Added comprehensive documentation for `useQNCE` hook, `UndoRedoControls`, and `AutosaveIndicator` components
+- **API Reference**: Enhanced with complete TypeScript interfaces and practical examples
+- **Getting Started**: Updated React integration examples to use current v1.2.0 patterns
+- **Feature Coverage**: Added missing v1.2.0 documentation for State Persistence, React UI, and Undo/Redo systems
+- **Code Quality**: All documentation examples now compile successfully
+
+### 📦 Migration from v1.2.0
+No breaking changes - this is a documentation and compatibility update. Simply update:
+```bash
+npm install qnce-engine@1.2.1
+```
+
 ## 🚀 Version 1.2.0 - Major Public Release
 
 **Released:** July 2, 2025  

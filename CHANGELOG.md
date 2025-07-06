@@ -5,6 +5,24 @@ All notable changes to the QNCE Engine will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.1] - 2025-07-05
+
+### Fixed 🐛
+
+- **TypeScript Compatibility** - Fixed Set spread operator compatibility issue in condition.ts for better cross-environment support
+- **Documentation Links** - Updated package.json with correct homepage and bugs URLs for improved NPM integration
+
+### Enhanced 📚
+
+- **Complete Documentation Overhaul** - Comprehensive documentation update for v1.2.0 features
+  - Added React UI Components section with useQNCE hook, UndoRedoControls, and AutosaveIndicator
+  - Enhanced Getting Started guide with current v1.2.0 React integration patterns
+  - Expanded API Reference with complete TypeScript interfaces and practical examples
+  - Updated Home page with State Management and UI Components feature highlights
+  - Added missing v1.2.0 features to Release Notes (State Persistence, React UI, Undo/Redo)
+- **Code Quality** - All documentation examples now compile successfully with TypeScript
+- **Package Metadata** - Enhanced NPM package information for better discoverability
+
 ## [1.2.0] - 2025-07-03
 
 ### Added ✨
