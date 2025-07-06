@@ -2,17 +2,37 @@
 
 Complete API documentation for QNCE Engine classes, interfaces, and functions.
 
-## 📖 Core API Overview
+## � Table of Contents
+
+- [Core API Overview](#-core-api-overview)
+- [Core Engine API](#-core-engine-api)
+  - [createQNCEEngine()](#createqnceengine)
+  - [QNCEEngine Class](#qnceengine-class)
+- [Data Models](#-data-models)
+  - [QNCEStory Interface](#qncestory-interface)
+  - [Node Interface](#node-interface)
+  - [Choice Interface](#choice-interface)
+  - [ConditionEvaluator Types](#conditionevaluator-types)
+- [Performance API](#-performance-api)
+- [React UI Components](#-react-ui-components)
+  - [useQNCE Hook](#useqnce-hook)
+  - [UndoRedoControls Component](#undoredocontrols-component)
+  - [AutosaveIndicator Component](#autosaveindicator-component)
+  - [useKeyboardShortcuts Hook](#usekeyboardshortcuts-hook)
+- [CLI Tools](#-cli-tools)
+- [Advanced Features](#-advanced-features)
+
+## �📖 Core API Overview
 
 The QNCE Engine API is organized into several main modules:
 
 | Module | Purpose | Key Exports |
 |--------|---------|-------------|
-| **Core Engine** | Main engine functionality | `createQNCEEngine`, `QNCEEngine` |
-| **Story Models** | Data structures and types | `QNCEStory`, `Node`, `Choice` |
-| **Branching System** | Advanced narrative features | `BranchingEngine`, `AIContext` |
-| **Performance** | Optimization and monitoring | `PerformanceMonitor`, `ObjectPool` |
-| **CLI Tools** | Command-line utilities | `AuditTool`, `PerfTool`, `InitTool` |
+| **[Core Engine](#-core-engine-api)** | Main engine functionality | `createQNCEEngine`, `QNCEEngine` |
+| **[Story Models](#-data-models)** | Data structures and types | `QNCEStory`, `Node`, `Choice` |
+| **[React UI](#-react-ui-components)** | React integration components | `useQNCE`, `UndoRedoControls` |
+| **[Performance](#-performance-api)** | Optimization and monitoring | `PerformanceMonitor`, `ObjectPool` |
+| **[CLI Tools](#-cli-tools)** | Command-line utilities | `AuditTool`, `PerfTool`, `InitTool` |
 
 ## 🚀 Core Engine API
 
@@ -499,7 +519,87 @@ Error thrown when condition expressions are invalid or unsafe.
 **Properties:**
 - `expression` (`string`): The expression that caused the error
 - `originalError` (`Error`, optional): The underlying error if available
-#### ValidationError
+
+---
+
+## 🚀 Performance API
+
+QNCE Engine includes enterprise-grade performance monitoring and optimization tools.
+
+### PerformanceMonitor Class
+
+Real-time performance tracking and analytics for narrative engines.
+
+```typescript
+import { PerformanceMonitor } from 'qnce-engine/performance';
+
+const monitor = new PerformanceMonitor({
+  enableMetrics: true,
+  sampleRate: 100
+});
+```
+
+#### Methods
+
+##### startTracking()
+
+```typescript
+startTracking(sessionId?: string): void
+```
+
+Begin performance monitoring for the current session.
+
+##### getMetrics()
+
+```typescript
+getMetrics(): PerformanceMetrics
+```
+
+Returns current performance metrics including response times, memory usage, and choice analytics.
+
+##### generateReport()
+
+```typescript
+generateReport(): PerformanceReport
+```
+
+Generates a comprehensive performance report with recommendations.
+
+### ObjectPool Class
+
+Memory optimization through object pooling for high-performance applications.
+
+```typescript
+import { ObjectPool } from 'qnce-engine/performance';
+
+const nodePool = new ObjectPool(() => ({ /* node template */ }), 100);
+```
+
+#### Methods
+
+##### acquire()
+
+```typescript
+acquire(): T
+```
+
+Get an object from the pool.
+
+##### release()
+
+```typescript
+release(obj: T): void
+```
+
+Return an object to the pool.
+
+##### clear()
+
+```typescript
+clear(): void
+```
+
+Clear all objects from the pool.
 
 ---
 
@@ -739,6 +839,182 @@ function GameComponent({ engine }) {
   // Component content...
 }
 ```
+
+---
+
+## 🛠️ CLI Tools
+
+Command-line utilities for development, testing, and production monitoring.
+
+### qnce-init
+
+Initialize a new QNCE project with templates and configuration.
+
+```bash
+# Create a new interactive story project
+qnce-init my-story --template basic
+
+# Advanced project with React integration
+qnce-init my-game --template react-typescript
+```
+
+#### Options
+
+- `--template <type>`: Project template (basic, advanced, react, react-typescript)
+- `--output <dir>`: Output directory
+- `--version`: Show version
+- `--help`: Show help
+
+### qnce-audit
+
+Validate story files for errors, performance issues, and best practices.
+
+```bash
+# Audit a story file
+qnce-audit story.json
+
+# Audit with detailed performance analysis
+qnce-audit story.json --performance --verbose
+```
+
+#### Options
+
+- `--performance`: Include performance analysis
+- `--verbose`: Detailed output
+- `--format <type>`: Output format (json, table, markdown)
+- `--output <file>`: Save report to file
+
+### qnce-perf
+
+Performance monitoring and benchmarking tools.
+
+```bash
+# Run performance tests
+qnce-perf benchmark story.json
+
+# Monitor live performance
+qnce-perf monitor --port 3001
+```
+
+#### Options
+
+- `--port <number>`: Port for monitoring server
+- `--duration <ms>`: Test duration
+- `--concurrent <number>`: Concurrent operations
+- `--format <type>`: Report format
+
+### qnce-play
+
+Interactive story testing and debugging tool.
+
+```bash
+# Play through a story interactively
+qnce-play story.json
+
+# Start from a specific node
+qnce-play story.json --start chapter_2
+```
+
+#### Options
+
+- `--start <nodeId>`: Starting node ID
+- `--debug`: Enable debug mode
+- `--flags <json>`: Initial flags (JSON object)
+- `--auto`: Auto-play with random choices
+
+---
+
+## 🔧 Advanced Features
+
+### Serialization Options
+
+Advanced configuration for state persistence.
+
+```typescript
+interface SerializationOptions {
+  prettyPrint?: boolean;        // Format JSON with indentation
+  includeMetadata?: boolean;    // Include engine metadata
+  enableChecksum?: boolean;     // Add data integrity checksum
+  compression?: 'none' | 'gzip'; // Compression algorithm
+}
+```
+
+### Load Options
+
+Configuration for state loading and validation.
+
+```typescript
+interface LoadOptions {
+  validateChecksum?: boolean;   // Verify data integrity
+  allowMigration?: boolean;     // Allow version migration
+  strict?: boolean;            // Strict validation mode
+  timeout?: number;            // Load timeout in ms
+}
+```
+
+### Error Types
+
+QNCE Engine provides specific error types for better error handling.
+
+```typescript
+// Navigation errors
+class QNCENavigationError extends Error {
+  nodeId: string;
+  constructor(message: string, nodeId: string);
+}
+
+// Validation errors  
+class ValidationError extends Error {
+  field: string;
+  value: any;
+  constructor(message: string, field: string, value?: any);
+}
+
+// Condition evaluation errors
+class ConditionEvaluationError extends Error {
+  expression: string;
+  originalError?: Error;
+  constructor(message: string, expression: string, originalError?: Error);
+}
+
+// Serialization errors
+class SerializationError extends Error {
+  operation: 'save' | 'load';
+  constructor(message: string, operation: 'save' | 'load');
+}
+```
+
+### Migration Support
+
+Support for upgrading saved states between engine versions.
+
+```typescript
+interface MigrationHandler {
+  fromVersion: string;
+  toVersion: string;
+  migrate: (oldState: any) => SerializedState;
+}
+
+// Register custom migration
+engine.registerMigration({
+  fromVersion: '1.0.0',
+  toVersion: '1.2.0',
+  migrate: (oldState) => {
+    // Transform old state format to new format
+    return transformedState;
+  }
+});
+```
+
+---
+
+## 📚 Related Documentation
+
+- **[Getting Started](Getting-Started)** - Quick start guide and tutorials
+- **[Branching Guide](Branching-Guide)** - Advanced narrative branching techniques  
+- **[Performance Tuning](Performance-Tuning)** - Optimization best practices
+- **[CLI Usage](CLI-Usage)** - Command-line tools documentation
+- **[Release Notes](Release-Notes)** - Version history and migration guides
 
 ---
 
