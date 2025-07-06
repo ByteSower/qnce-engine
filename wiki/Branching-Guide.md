@@ -543,6 +543,18 @@ function migrateToBranching(basicStory: BasicQNCEStory): QNCEStory {
 
 ---
 
+<div align="center">
+
+**Ready for advanced narrative branching?**
+
+[Performance Tuning →](Performance-Tuning) | [API Reference →](API-Reference) | [Examples →](https://github.com/ByteSower/qnce-engine/tree/main/examples)
+
+*Built with ❤️ by the QNCE development team*
+
+</div>
+
+---
+
 ## 📍 Wiki Navigation
 
 **← Previous:** [Getting Started](Getting-Started) | **You are here:** Branching Guide | **Next:** [Performance Tuning →](Performance-Tuning)

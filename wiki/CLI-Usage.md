@@ -675,4 +675,26 @@ wait $APP_PID
 
 ---
 
+<div align="center">
+
+**Need help with CLI tools?**
+
+[Getting Started →](Getting-Started) | [API Reference →](API-Reference) | [GitHub Issues →](https://github.com/ByteSower/qnce-engine/issues)
+
+*Built with ❤️ by the QNCE development team*
+
+</div>
+
+---
+
+## 📍 Wiki Navigation
+
+**You are here:** CLI Usage
+
+**Previous:** [Performance Tuning ←](Performance-Tuning) | **Next:** [API Reference →](API-Reference)
+
+**All Pages:** [Home](Home) • [Getting Started](Getting-Started) • [Branching Guide](Branching-Guide) • [Performance Tuning](Performance-Tuning) • **CLI Usage** • [API Reference](API-Reference) • [Contributing](Contributing) • [Release Notes](Release-Notes)
+
+---
+
 *This documentation is maintained for QNCE Engine v1.2.2 with complete advanced feature set including Choice Validation, State Persistence, Conditional Choices, Autosave & Undo/Redo, and UI Components.*

@@ -576,6 +576,18 @@ Now that you have QNCE Engine set up, here's what to explore next:
 
 ---
 
+<div align="center">
+
+**Ready to build amazing interactive narratives?**
+
+[Branching Guide →](Branching-Guide) | [Examples →](https://github.com/ByteSower/qnce-engine/tree/main/examples) | [Join Community →](https://github.com/ByteSower/qnce-engine/discussions)
+
+*Built with ❤️ by the QNCE development team*
+
+</div>
+
+---
+
 ## 📍 Wiki Navigation
 
 **← Previous:** [Home](Home) | **You are here:** Getting Started | **Next:** [Branching Guide →](Branching-Guide)

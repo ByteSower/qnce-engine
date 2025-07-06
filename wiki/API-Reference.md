@@ -1018,4 +1018,26 @@ engine.registerMigration({
 
 ---
 
+<div align="center">
+
+**Need help with the API?**
+
+[Getting Started →](Getting-Started) | [Examples →](https://github.com/ByteSower/qnce-engine/tree/main/examples) | [GitHub Issues →](https://github.com/ByteSower/qnce-engine/issues)
+
+*Built with ❤️ by the QNCE development team*
+
+</div>
+
+---
+
+## 📍 Wiki Navigation
+
+**You are here:** API Reference
+
+**Previous:** [CLI Usage ←](CLI-Usage) | **Next:** [Contributing →](Contributing)
+
+**All Pages:** [Home](Home) • [Getting Started](Getting-Started) • [Branching Guide](Branching-Guide) • [Performance Tuning](Performance-Tuning) • [CLI Usage](CLI-Usage) • **API Reference** • [Contributing](Contributing) • [Release Notes](Release-Notes)
+
+---
+
 *This documentation is maintained for QNCE Engine v1.2.2 with advanced feature set including Choice Validation, State Persistence, Conditional Choices, Autosave & Undo/Redo, and UI Components.*

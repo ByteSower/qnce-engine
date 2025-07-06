@@ -588,6 +588,18 @@ engine.integrateWith('grafana', {
 
 ---
 
+<div align="center">
+
+**Ready to optimize your narrative engine?**
+
+[CLI Usage →](CLI-Usage) | [Performance Docs →](https://github.com/ByteSower/qnce-engine/blob/main/docs/PERFORMANCE.md) | [Get Support →](https://github.com/ByteSower/qnce-engine/issues)
+
+*Built with ❤️ by the QNCE development team*
+
+</div>
+
+---
+
 ## 📍 Wiki Navigation
 
 **← Previous:** [Branching Guide](Branching-Guide) | **You are here:** Performance Tuning | **Next:** [CLI Usage →](CLI-Usage)

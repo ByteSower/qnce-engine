@@ -653,6 +653,18 @@ We encourage experienced contributors to mentor newcomers:
 
 ---
 
+<div align="center">
+
+**Ready to contribute to QNCE Engine?**
+
+[GitHub Repository →](https://github.com/ByteSower/qnce-engine) | [Open Issues →](https://github.com/ByteSower/qnce-engine/issues) | [Discussions →](https://github.com/ByteSower/qnce-engine/discussions)
+
+*Built with ❤️ by the QNCE development team*
+
+</div>
+
+---
+
 ## 📍 Wiki Navigation
 
 **← Previous:** [API Reference](API-Reference) | **You are here:** Contributing | **Next:** [Release Notes →](Release-Notes)
