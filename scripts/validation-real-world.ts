@@ -1,5 +1,5 @@
-// ByteSower's Use-Case Validation - Simplified Real-World Testing
-// Sprint #3 Branching API validation against production scenarios
+// QNCE Engine Use-Case Validation - Real-World Testing
+// Advanced feature validation against production scenarios
 
 import { createBranchingEngine } from '../src/narrative/branching/engine-simple';
 import { 
@@ -24,7 +24,7 @@ const createTestStory = (): QNCEStory => ({
   title: 'The Digital Detective',
   version: '1.0.0',
   metadata: {
-    author: 'ByteSower Validation',
+    author: 'QNCE Validation Team',
     description: 'Multi-branch detective story for API validation',
     tags: ['mystery', 'choice-driven', 'conditional'],
     createDate: new Date(),

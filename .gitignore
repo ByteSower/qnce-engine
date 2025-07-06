@@ -44,3 +44,14 @@ demo-performance.mjs
 
 # ESLint cache
 .eslintcache
+
+# Internal files and processes (never commit)
+*CHAT*.txt
+*INTERNAL*
+*-PR.md
+*CHECKLIST*
+*ANNOUNCEMENT*
+TEAM-*
+STRATEGY-*
+SPRINT-*
+*-PROCESS-*.md
