@@ -257,15 +257,15 @@ const options = {
 
 ### 🚧 Pre-Release Versions
 
-#### v1.1.0-beta (Internal)
-- **Released:** June 2025 (Internal)
+#### v1.1.0-beta
+- **Released:** June 2025
 - Basic branching system implementation
 - Initial performance infrastructure
 - CLI tools prototype
 - TypeScript migration
 
-#### v1.0.0-alpha (Internal)
-- **Released:** May 2025 (Internal)
+#### v1.0.0-alpha
+- **Released:** May 2025
 - Core engine implementation
 - Basic story format
 - Node.js support

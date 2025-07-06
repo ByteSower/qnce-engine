@@ -581,3 +581,7 @@ Now that you have QNCE Engine set up, here's what to explore next:
 **← Previous:** [Home](Home) | **You are here:** Getting Started | **Next:** [Branching Guide →](Branching-Guide)
 
 **All Pages:** [Home](Home) • **Getting Started** • [Branching Guide](Branching-Guide) • [Performance Tuning](Performance-Tuning) • [CLI Usage](CLI-Usage) • [API Reference](API-Reference) • [Contributing](Contributing) • [Release Notes](Release-Notes)
+
+---
+
+*This documentation is maintained for QNCE Engine v1.2.1 with advanced feature set including Choice Validation, State Persistence, Conditional Choices, Autosave & Undo/Redo, and UI Components.*

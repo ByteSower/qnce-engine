@@ -593,3 +593,7 @@ engine.integrateWith('grafana', {
 **← Previous:** [Branching Guide](Branching-Guide) | **You are here:** Performance Tuning | **Next:** [CLI Usage →](CLI-Usage)
 
 **All Pages:** [Home](Home) • [Getting Started](Getting-Started) • [Branching Guide](Branching-Guide) • **Performance Tuning** • [CLI Usage](CLI-Usage) • [API Reference](API-Reference) • [Contributing](Contributing) • [Release Notes](Release-Notes)
+
+---
+
+*This documentation is maintained for QNCE Engine v1.2.1 with advanced feature set including Choice Validation, State Persistence, Conditional Choices, Autosave & Undo/Redo, and UI Components.*

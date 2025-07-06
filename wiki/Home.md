@@ -174,7 +174,7 @@ QNCE Engine is released under the [MIT License](https://github.com/ByteSower/qnc
 
 [Get Started →](Getting-Started) | [View Examples →](https://github.com/ByteSower/qnce-engine/tree/main/examples) | [Join Community →](https://github.com/ByteSower/qnce-engine/discussions)
 
-*Built with ❤️ by the ByteSower team*
+*Built with ❤️ by the QNCE development team*
 
 </div>
 
@@ -187,3 +187,7 @@ QNCE Engine is released under the [MIT License](https://github.com/ByteSower/qnc
 **Next:** [Getting Started →](Getting-Started)
 
 **All Pages:** [Getting Started](Getting-Started) • [Branching Guide](Branching-Guide) • [Performance Tuning](Performance-Tuning) • [CLI Usage](CLI-Usage) • [API Reference](API-Reference) • [Contributing](Contributing) • [Release Notes](Release-Notes)
+
+---
+
+*This documentation is maintained for QNCE Engine v1.2.1 with advanced feature set including Choice Validation, State Persistence, Conditional Choices, Autosave & Undo/Redo, and UI Components.*

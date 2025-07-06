@@ -1018,4 +1018,4 @@ engine.registerMigration({
 
 ---
 
-*This documentation is maintained for QNCE Engine v1.2.1 with complete Sprint 3 integration including Choice Validation, State Persistence, Conditional Choices, Autosave & Undo/Redo, and UI Components.*
+*This documentation is maintained for QNCE Engine v1.2.1 with advanced feature set including Choice Validation, State Persistence, Conditional Choices, Autosave & Undo/Redo, and UI Components.*
