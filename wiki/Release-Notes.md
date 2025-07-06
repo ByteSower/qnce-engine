@@ -38,6 +38,26 @@ This marks the first public release of the Quantum Narrative Convergence Engine.
 - **Modular architecture** allowing selective feature imports
 - **Extensive examples** from basic quickstart to advanced enterprise scenarios
 
+#### 💾 State Persistence & Autosave
+- **Full state serialization** with compression and validation
+- **Automatic save/restore** with configurable intervals and triggers
+- **Checkpoint system** for implementing undo/redo functionality
+- **Cross-session persistence** with localStorage and custom storage adapters
+- **Save validation** ensuring data integrity and version compatibility
+
+#### 🎨 React UI Components
+- **`useQNCE` Hook** - Reactive state management for React components
+- **`UndoRedoControls`** - Pre-built accessible undo/redo controls with theming
+- **`AutosaveIndicator`** - Visual feedback for autosave status with timestamps
+- **`useKeyboardShortcuts`** - Keyboard shortcut integration for common actions
+- **Framework Integration** - Built-in React, Vue, and vanilla JS adapters
+
+#### 🔄 Undo/Redo System
+- **Multi-level undo/redo** with configurable history depth
+- **Automatic checkpointing** before critical choices and state changes
+- **Memory-efficient snapshots** using differential state compression
+- **UI integration** with keyboard shortcuts and accessibility support
+
 ### 🎯 Core Concepts
 
 - **Superposition:** Multiple narrative outcomes exist simultaneously until a choice is made

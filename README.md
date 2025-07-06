@@ -2,7 +2,11 @@
 
 **Quantum Narrative Convergence Engine** - A framework-agnostic TypeScript library for creating interactive narrative experiences with quantum-inspired mechanics.
 
-> **🚀 NEW in v1.2.0:** Advanced Branching API with AI integration, dynamic content management, and comprehensive analytics. Plus enterprise-grade performance optimization.
+> **🚀 NEW in v1.2.0:** Complete state persistence, advanced branching with AI integration, autosave & undo/redo system, conditional choice display, and comprehensive UI components with React integration.
+
+[![npm version](https://badge.fury.io/js/qnce-engine.svg)](https://badge.fury.io/js/qnce-engine)
+[![TypeScript](https://img.shields.io/badge/TypeScript-Ready-blue.svg)](https://www.typescriptlang.org/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 ## Core Concepts
 
@@ -10,7 +14,13 @@
 - **Collapse:** Player choices "collapse" the narrative to a specific path, updating state and flags
 - **Entanglement:** Early decisions affect later outcomes, enabling complex, interconnected stories
 
-## ✨ Advanced Features (v1.2.0)
+## ✨ What's New in v1.2.0
+
+### 💾 State Persistence & Checkpoints
+- **Complete save/load system** with data integrity validation
+- **Lightweight checkpoints** for undo/redo functionality
+- **Automatic state serialization** with metadata and versioning
+- **Migration support** for upgrading saved states between versions
 
 ### 🌿 Advanced Branching System
 - **Multi-path narratives** with conditional logic and flag-based branching
@@ -25,8 +35,22 @@
 - **Memory efficient** with automatic cleanup and history limits
 
 ### 🎯 Conditional Choice Display
+- **Flag-based choice filtering** with complex logical expressions
+- **Custom validation rules** for advanced choice availability
+- **Real-time choice updates** based on dynamic game state
+- **Intuitive condition syntax** supporting multiple data types
 
-QNCE Engine supports conditional choice display, allowing authors to show or hide narrative choices based on flags, time, inventory, or custom logic. This enables dynamic storytelling where available options change based on the player's journey.
+### 🖥️ UI Integration & React Components
+- **Ready-to-use React components** for common UI patterns
+- **Keyboard shortcuts** with customizable bindings
+- **Accessibility features** with ARIA support and screen reader compatibility
+- **Theming system** with customizable appearance
+
+### ⚡ Enterprise Performance
+- **Object pooling** reduces memory allocations by 90%+
+- **Background processing** for non-blocking operations
+- **Hot-reload capabilities** with <3.5ms story updates
+- **Comprehensive monitoring** with built-in CLI tools
 
 #### Basic Flag-Based Conditions
 
@@ -650,6 +674,52 @@ Features:
 - State inspection and debugging
 - Performance monitoring
 - Session save/load functionality
+
+### qnce-perf
+
+**NEW in v1.2.0:** Real-time performance monitoring and analytics:
+
+```bash
+# Launch interactive performance dashboard
+qnce-perf dashboard
+
+# Live monitoring with custom update interval
+qnce-perf live [interval-ms]
+
+# Export performance data to JSON
+qnce-perf export [--format json|csv] [--output filename]
+
+# Single performance snapshot
+qnce-perf snapshot story.json
+```
+
+**Dashboard Features:**
+- Real-time memory usage and allocation tracking
+- Object pool efficiency monitoring
+- Performance hotspot identification  
+- Live story update timing analysis
+- Historical performance trend graphs
+
+**Live Monitoring:**
+```bash
+# Monitor with 1-second updates
+qnce-perf live 1000
+
+# Default 500ms updates
+qnce-perf live
+```
+
+**Export Options:**
+```bash
+# Export to JSON with full metrics
+qnce-perf export --format json --output metrics.json
+
+# Export to CSV for spreadsheet analysis
+qnce-perf export --format csv --output performance.csv
+
+# Stream to stdout
+qnce-perf export
+```
 
 ## Integration Examples
 

@@ -207,62 +207,74 @@ if (engine.getFlags().courage > 0) {
 
 ### React Integration
 
+QNCE Engine provides a built-in React hook and UI components for seamless integration.
+
 ```typescript
-// useQNCE.ts
-import { useState, useEffect } from 'react';
-import { createQNCEEngine, QNCEStory } from 'qnce-engine';
-
-export function useQNCE(story: QNCEStory) {
-  const [engine] = useState(() => createQNCEEngine(story));
-  const [currentNode, setCurrentNode] = useState(engine.getCurrentNode());
-  const [flags, setFlags] = useState(engine.getFlags());
-
-  const makeChoice = (choiceIndex: number) => {
-    engine.makeChoice(choiceIndex);
-    setCurrentNode(engine.getCurrentNode());
-    setFlags(engine.getFlags());
-  };
-
-  const choices = engine.getAvailableChoices();
-
-  return {
-    currentNode,
-    choices,
-    flags,
-    makeChoice,
-    reset: () => {
-      engine.reset();
-      setCurrentNode(engine.getCurrentNode());
-      setFlags(engine.getFlags());
-    }
-  };
-}
-
 // StoryComponent.tsx
-import React from 'react';
-import { useQNCE } from './useQNCE';
+import React, { useState } from 'react';
+import { createQNCEEngine } from 'qnce-engine';
+import { useQNCE } from 'qnce-engine/integrations/react';
+import { UndoRedoControls, AutosaveIndicator } from 'qnce-engine/ui';
 import { myStory } from './story';
 
 export function StoryComponent() {
-  const { currentNode, choices, flags, makeChoice } = useQNCE(myStory);
+  const [engine] = useState(() => createQNCEEngine(myStory));
+  
+  const {
+    currentNode,
+    availableChoices,
+    selectChoice,
+    flags,
+    undo,
+    redo,
+    canUndo,
+    canRedo,
+    isComplete
+  } = useQNCE(engine, {
+    enableUndoRedo: true,
+    enableAutosave: true,
+    maxUndoEntries: 50
+  });
 
   return (
     <div className="story-container">
+      {/* Autosave indicator */}
+      <AutosaveIndicator
+        engine={engine}
+        position="top-right"
+        variant="detailed"
+        showTimestamp={true}
+      />
+      
       <div className="story-text">
-        <p>{currentNode.text}</p>
+        <p>{currentNode?.text}</p>
       </div>
       
       <div className="choices">
-        {choices.map((choice, index) => (
+        {availableChoices.map((choice, index) => (
           <button
             key={index}
-            onClick={() => makeChoice(index)}
+            onClick={() => selectChoice(choice)}
             className="choice-button"
           >
             {choice.text}
           </button>
         ))}
       </div>
+      
+      {/* Undo/Redo controls */}
+      <UndoRedoControls
+        engine={engine}
+        size="md"
+        showLabels={true}
+        layout="horizontal"
+      />
+      
+      {isComplete && (
+        <div className="story-complete">
+          <h3>Story Complete!</h3>
+        </div>
+      )}
       
       <div className="flags">
         <h4>Story Flags:</h4>

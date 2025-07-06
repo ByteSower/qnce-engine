@@ -240,7 +240,7 @@ export class ConditionEvaluator {
       matches.push(match[1]);
     }
     
-    return [...new Set(matches)]; // Remove duplicates
+    return Array.from(new Set(matches)); // Remove duplicates
   }
 }
 

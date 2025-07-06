@@ -503,4 +503,243 @@ Error thrown when condition expressions are invalid or unsafe.
 
 ---
 
+## 🎨 React UI Components
+
+QNCE Engine provides ready-to-use React components and hooks for building narrative interfaces.
+
+### useQNCE Hook
+
+React hook for integrating QNCE Engine with React components. Provides reactive state management and action handlers.
+
+```typescript
+function useQNCE(engine: QNCEEngine, config?: UseQNCEConfig): UseQNCEReturn
+```
+
+#### Parameters
+
+- **`engine`** (`QNCEEngine`): The QNCE Engine instance
+- **`config`** (`UseQNCEConfig`, optional): Configuration options
+
+#### Configuration Options (UseQNCEConfig)
+
+```typescript
+interface UseQNCEConfig {
+  autoUpdate?: boolean;          // Auto re-render on state changes (default: true)
+  enableUndoRedo?: boolean;      // Enable undo/redo functionality (default: true)
+  maxUndoEntries?: number;       // Maximum undo entries (default: 50)
+  maxRedoEntries?: number;       // Maximum redo entries (default: 25)
+  enableAutosave?: boolean;      // Enable autosave (default: true)
+  autosaveThrottleMs?: number;   // Autosave throttle in ms (default: 100)
+}
+```
+
+#### Returns (UseQNCEReturn)
+
+```typescript
+interface UseQNCEReturn {
+  currentNode: Node | null;
+  availableChoices: Choice[];
+  selectChoice: (choice: Choice) => void;
+  flags: Record<string, any>;
+  isComplete: boolean;
+  history: string[];
+  undo: () => void;
+  redo: () => void;
+  canUndo: boolean;
+  canRedo: boolean;
+  undoCount: number;
+  redoCount: number;
+}
+```
+
+#### Example
+
+```typescript
+import React from 'react';
+import { useQNCE } from 'qnce-engine/integrations/react';
+
+function StoryComponent({ engine }) {
+  const {
+    currentNode,
+    availableChoices,
+    selectChoice,
+    undo,
+    redo,
+    canUndo,
+    canRedo
+  } = useQNCE(engine, {
+    enableUndoRedo: true,
+    enableAutosave: true,
+    maxUndoEntries: 50
+  });
+
+  return (
+    <div>
+      <p>{currentNode?.text}</p>
+      
+      <div>
+        {availableChoices.map(choice => (
+          <button key={choice.text} onClick={() => selectChoice(choice)}>
+            {choice.text}
+          </button>
+        ))}
+      </div>
+      
+      <div>
+        <button onClick={undo} disabled={!canUndo}>
+          Undo
+        </button>
+        <button onClick={redo} disabled={!canRedo}>
+          Redo
+        </button>
+      </div>
+    </div>
+  );
+}
+```
+
+### UndoRedoControls Component
+
+Pre-built accessible undo/redo controls with theming support.
+
+```typescript
+interface UndoRedoControlsProps {
+  engine: QNCEEngine;
+  theme?: Partial<QNCETheme>;
+  className?: string;
+  style?: React.CSSProperties;
+  disabled?: boolean;
+  showLabels?: boolean;
+  labels?: { undo: string; redo: string };
+  size?: 'sm' | 'md' | 'lg';
+  layout?: 'horizontal' | 'vertical';
+  onUndo?: () => void;
+  onRedo?: () => void;
+}
+```
+
+#### Example
+
+```typescript
+import React from 'react';
+import { UndoRedoControls } from 'qnce-engine/ui';
+
+function GameInterface({ engine }) {
+  return (
+    <div>
+      {/* Your game content */}
+      
+      <UndoRedoControls
+        engine={engine}
+        size="lg"
+        showLabels={true}
+        theme={{
+          colors: {
+            primary: '#007bff',
+            secondary: '#6c757d'
+          }
+        }}
+        onUndo={() => console.log('Undo clicked')}
+        onRedo={() => console.log('Redo clicked')}
+      />
+    </div>
+  );
+}
+```
+
+### AutosaveIndicator Component
+
+Visual indicator showing autosave status with real-time updates.
+
+```typescript
+interface AutosaveIndicatorProps {
+  engine: QNCEEngine;
+  theme?: Partial<QNCETheme>;
+  className?: string;
+  style?: React.CSSProperties;
+  variant?: 'minimal' | 'detailed';
+  position?: 'inline' | 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right';
+  messages?: {
+    idle: string;
+    saving: string;
+    saved: string;
+    error: string;
+    disabled: string;
+  };
+  showTimestamp?: boolean;
+  autoHideDelay?: number;
+}
+```
+
+#### Example
+
+```typescript
+import React from 'react';
+import { AutosaveIndicator } from 'qnce-engine/ui';
+
+function GameInterface({ engine }) {
+  return (
+    <div>
+      <AutosaveIndicator
+        engine={engine}
+        variant="detailed"
+        position="top-right"
+        showTimestamp={true}
+        autoHideDelay={5000}
+        messages={{
+          saving: 'Saving your progress...',
+          saved: 'Progress saved!',
+          error: 'Save failed - check connection'
+        }}
+      />
+      
+      {/* Your game content */}
+    </div>
+  );
+}
+```
+
+### useKeyboardShortcuts Hook
+
+React hook for adding keyboard shortcuts to QNCE Engine interactions.
+
+```typescript
+function useKeyboardShortcuts(config: KeyboardShortcutsConfig): void
+
+interface KeyboardShortcutsConfig {
+  engine: QNCEEngine;
+  shortcuts?: {
+    undo?: string;      // Default: 'ctrl+z' or 'cmd+z'
+    redo?: string;      // Default: 'ctrl+y' or 'cmd+shift+z'
+    save?: string;      // Default: 'ctrl+s' or 'cmd+s'
+    [key: string]: string | undefined;
+  };
+  disabled?: boolean;
+  preventDefault?: boolean;
+}
+```
+
+#### Example
+
+```typescript
+import React from 'react';
+import { useKeyboardShortcuts } from 'qnce-engine/ui';
+
+function GameComponent({ engine }) {
+  useKeyboardShortcuts({
+    engine,
+    shortcuts: {
+      undo: 'ctrl+z',
+      redo: 'ctrl+shift+z',
+      save: 'ctrl+s'
+    },
+    preventDefault: true
+  });
+
+  // Component content...
+}
+```
+
+---
+
 *This documentation is maintained for QNCE Engine v1.2.0 with complete Sprint 3 integration including Choice Validation, State Persistence, Conditional Choices, Autosave & Undo/Redo, and UI Components.*

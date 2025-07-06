@@ -39,6 +39,10 @@
     "type": "git",
     "url": "https://github.com/ByteSower/qnce-engine.git"
   },
+  "homepage": "https://github.com/ByteSower/qnce-engine#readme",
+  "bugs": {
+    "url": "https://github.com/ByteSower/qnce-engine/issues"
+  },
   "devDependencies": {
     "@testing-library/dom": "^10.4.0",
     "@testing-library/jest-dom": "^6.6.3",

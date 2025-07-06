@@ -38,6 +38,18 @@ The **Quantum Narrative Convergence Engine (QNCE)** is a powerful TypeScript lib
 - **Modular architecture** allowing selective feature imports
 - **CLI tools** for project scaffolding and performance monitoring
 
+### 💾 **State Management**
+- **Full state persistence** with compression and validation
+- **Automatic save/restore** with configurable intervals
+- **Checkpoint system** for implementing undo/redo functionality
+- **Cross-session persistence** with localStorage and custom storage adapters
+
+### 🎨 **UI Components**
+- **React integration** with `useQNCE` hook for reactive state management
+- **Pre-built components** - UndoRedoControls, AutosaveIndicator
+- **Keyboard shortcuts** for common actions and accessibility
+- **Customizable theming** and responsive design support
+
 ## 🎯 Core Concepts
 
 | Concept | Description | Example |
