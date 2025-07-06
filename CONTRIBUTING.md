@@ -227,6 +227,10 @@ qnce-engine/
 └── dist/                  # Built output
 ```
 
+## Release Process
+
+For maintainers creating releases, please follow the standardized process documented in [`RELEASE-PROCESS.md`](./RELEASE-PROCESS.md). This ensures consistent versioning and smooth releases.
+
 ## 🤔 Questions or Need Help?
 
 - **GitHub Discussions:** For questions and community discussion
