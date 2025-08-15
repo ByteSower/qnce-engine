@@ -36,6 +36,8 @@ import {
   SerializationMetadata,
   PERSISTENCE_VERSION
 } from './types';
+// Storage adapter types
+import { createStorageAdapter, AnyAdapter } from '../persistence/StorageAdapters';
 
 // Conditional choice evaluator - Sprint 3.4
 import { 
@@ -133,6 +135,7 @@ export class QNCEEngine {
 
   // Sprint 3.3: State persistence properties
   private checkpointManager?: CheckpointManager;
+  private storageAdapter?: AnyAdapter;
 
   // Sprint 3.5: Autosave and Undo/Redo properties
   private undoStack: HistoryEntry[] = [];
@@ -630,6 +633,23 @@ export class QNCEEngine {
   }
 
   /**
+   * Save state via configured storage adapter (if present)
+   * @param key storage key
+   * @param options serialization options
+   */
+  async saveStateToStorage(key: string, options: SerializationOptions = {}): Promise<PersistenceResult> {
+    if (!this.storageAdapter) {
+      return { success: false, error: 'No storage adapter configured' };
+    }
+    try {
+      const serialized = await this.saveState(options);
+  return await this.storageAdapter.save(key, serialized);
+    } catch (e: any) {
+      return { success: false, error: e?.message || 'Unknown storage save error' };
+    }
+  }
+
+  /**
    * Load engine state from serialized format
    * @param serializedState - The serialized state to load
    * @param options - Load options
@@ -743,6 +763,40 @@ export class QNCEEngine {
         data: { duration }
       };
     }
+  }
+
+  /**
+   * Load state from configured storage adapter
+   * @param key storage key
+   */
+  async loadStateFromStorage(key: string, options: LoadOptions = {}): Promise<PersistenceResult> {
+    if (!this.storageAdapter) return { success: false, error: 'No storage adapter configured' };
+  const serialized = await this.storageAdapter.load(key);
+    if (!serialized) return { success: false, error: 'Stored state not found' };
+    return this.loadState(serialized, options);
+  }
+
+  /**
+   * Configure storage adapter
+   */
+  configureStorageAdapter(type: 'memory' | 'localStorage' | 'sessionStorage' | 'file' | 'indexedDB', options: any = {}): void {
+    this.storageAdapter = createStorageAdapter(type as any, options);
+  }
+
+  /**
+   * Get current storage keys (if adapter supports it)
+   */
+  async listStoredStates(): Promise<string[]> {
+    if (!this.storageAdapter) return [];
+    return this.storageAdapter.list();
+  }
+
+  /**
+   * Delete stored state by key
+   */
+  async deleteStoredState(key: string): Promise<boolean> {
+    if (!this.storageAdapter) return false;
+    return this.storageAdapter.delete(key);
   }
 
   /**

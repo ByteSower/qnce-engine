@@ -30,3 +30,6 @@ export {
   type ConditionContext,
   type CustomEvaluatorFunction
 } from './engine/condition.js';
+
+// Storage adapters
+export * from './persistence/StorageAdapters.js';
