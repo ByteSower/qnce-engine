@@ -346,6 +346,101 @@ await engine.restoreFromCheckpoint(checkpoint.id);
 console.log('Restored to checkpoint:', engine.getCurrentNode().text);
 ```
 
+#### 🔌 Storage Adapters (New)
+
+The persistence system now supports pluggable storage adapters so you can seamlessly save / load narrative state across environments (memory, browser, Node.js filesystem, IndexedDB, etc.).
+
+Available adapters:
+
+| Adapter | Type Param | Environment | Notes |
+|---------|------------|-------------|-------|
+| In-Memory | `'memory'` | Any | Ephemeral Map-based storage, fastest, great for tests |
+| Local Storage | `'localStorage'` | Browser | Persists between sessions (per origin); guarded in Node |
+| Session Storage | `'sessionStorage'` | Browser | Clears when tab closes |
+| File System | `'file'` | Node.js | Stores each save as JSON file (one per key) in a directory |
+| IndexedDB | `'indexedDB'` | Browser | Asynchronous, scalable for many saves |
+
+Core API additions:
+
+```ts
+engine.configureStorageAdapter(type, options?)
+await engine.saveStateToStorage(key, { metadata? })
+await engine.loadStateFromStorage(key, { validateChecksum?: boolean })
+await engine.deleteStoredState(key)
+await engine.listStoredStates() // returns metadata summaries
+```
+
+Quick start (browser – localStorage):
+
+```ts
+engine.configureStorageAdapter('localStorage', { namespace: 'qnce', keyPrefix: 'save-' });
+
+// Save current state into localStorage under key save-slot1
+await engine.saveStateToStorage('slot1', { metadata: { label: 'Before Boss', chapter: 'Act2' } });
+
+// Enumerate saves
+const saves = await engine.listStoredStates();
+console.log(saves.map(s => s.key));
+
+// Load later
+await engine.loadStateToStorage?. // (typo guard) actually:
+await engine.loadStateFromStorage('slot1');
+
+// Delete a save
+await engine.deleteStoredState('slot1');
+```
+
+Node.js file adapter:
+
+```ts
+engine.configureStorageAdapter('file', { dir: './saves', fileExtension: '.json' });
+await engine.saveStateToStorage('profileA');
+// Produces ./saves/profileA.json
+```
+
+IndexedDB (browser) – uses a database per namespace and an object store named `qnce_states` by default:
+
+```ts
+await engine.configureStorageAdapter('indexedDB', { dbName: 'qnceGame', storeName: 'qnce_states' });
+await engine.saveStateToStorage('autosave');
+```
+
+In-memory (useful for tests):
+
+```ts
+engine.configureStorageAdapter('memory');
+await engine.saveStateToStorage('temp');
+```
+
+Listing saves returns lightweight metadata (size, timestamps, optional user metadata) without loading full serialized state.
+
+Custom adapter (outline):
+
+```ts
+import { SerializedState } from 'qnce-engine';
+
+class MyEncryptedAdapter {
+  async save(key: string, state: SerializedState) {
+    const json = JSON.stringify(state);
+    const encrypted = encrypt(json); // your crypto layer
+    await remoteWrite(key, encrypted);
+  }
+  async load(key: string): Promise<SerializedState | undefined> {
+    const encrypted = await remoteRead(key);
+    if (!encrypted) return undefined;
+    return JSON.parse(decrypt(encrypted));
+  }
+  async delete(key: string) { await remoteDelete(key); }
+  async listKeys() { return remoteList(); }
+  async getMetadata?(key: string) { return { key }; }
+}
+```
+
+Attach your custom adapter by assigning `engine['storageAdapter'] = new MyEncryptedAdapter();` (or expose a helper). A formal plugin registration helper will be added in a future release.
+
+See the detailed guide: [Persistence & Storage Adapters](docs/PERSISTENCE.md)
+
+
 ### 🔄 Autosave & Undo/Redo System
 
 QNCE Engine v1.2.2 introduces an advanced autosave and undo/redo system that automatically tracks state changes and provides instant rollback capabilities with sub-millisecond performance.
