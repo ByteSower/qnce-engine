@@ -2,7 +2,7 @@
 
 **Quantum Narrative Convergence Engine** - A framework-agnostic TypeScript library for creating interactive narrative experiences with quantum-inspired mechanics.
 
-> **🚀 Latest v1.2.2:** Complete state persistence, advanced branching with AI integration, autosave & undo/redo system, conditional choice display, and comprehensive UI components with React integration.
+> **🚀 Latest v1.2.3:** Documentation consistency update and version alignment; core features unchanged from v1.2.2 (state persistence, advanced branching with AI integration, autosave & undo/redo, conditional choices, React UI components).
 
 [![npm version](https://badge.fury.io/js/qnce-engine.svg)](https://badge.fury.io/js/qnce-engine)
 [![TypeScript](https://img.shields.io/badge/TypeScript-Ready-blue.svg)](https://www.typescriptlang.org/)
@@ -14,7 +14,7 @@
 - **Collapse:** Player choices "collapse" the narrative to a specific path, updating state and flags
 - **Entanglement:** Early decisions affect later outcomes, enabling complex, interconnected stories
 
-## ✨ Current Features (v1.2.2)
+## ✨ Current Features (v1.2.3)
 
 ### 💾 State Persistence & Checkpoints
 - **Complete save/load system** with data integrity validation

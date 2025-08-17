@@ -5,7 +5,20 @@ All notable changes to the QNCE Engine will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-**📌 Current Version: [1.2.2] - 2025-07-05**
+**📌 Current Version: [1.2.3] - 2025-08-16**
+
+## [1.2.3] - 2025-08-16
+
+### Changed 📝
+
+- **Documentation Consistency** – Standardized wiki footer/navigation across pages
+- **Version Alignment** – Bumped library version to 1.2.3 (no engine code changes since 1.2.2)
+
+### Housekeeping 🧹
+
+- Minor README and metadata alignment preparing for next feature cycle
+
+> Note: A temporary `v1.3.0` tag existed earlier in history but did not introduce new engine features compared to 1.2.x. The authoritative current release is 1.2.3; future feature work will target an upcoming 1.3.x milestone.
 
 ## [1.2.2] - 2025-07-05
 
