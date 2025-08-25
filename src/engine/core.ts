@@ -36,6 +36,7 @@ import {
   SerializationMetadata,
   PERSISTENCE_VERSION
 } from './types';
+import { StorageAdapter } from './types';
 
 // Conditional choice evaluator - Sprint 3.4
 import { 
@@ -82,6 +83,10 @@ export interface NarrativeNode {
   id: string;
   text: string;
   choices: Choice[];
+  // Optional metadata bag for adapters/importers
+  meta?: {
+    tags?: string[];
+  };
 }
 
 export { QNCEStory };
@@ -154,6 +159,7 @@ export class QNCEEngine {
   };
   private lastAutosaveTime: number = 0;
   private isUndoRedoOperation: boolean = false;
+  private storageAdapter?: StorageAdapter;
 
   public get flags(): Record<string, unknown> {
     return this.state.flags;
@@ -194,6 +200,57 @@ export class QNCEEngine {
       flags: initialState?.flags || {},
       history: initialState?.history || [storyData.initialNodeId],
     };
+  }
+
+  // Lane B: StorageAdapter integration
+  /** Attach a storage adapter for persistence */
+  attachStorageAdapter(adapter: StorageAdapter): void {
+    this.storageAdapter = adapter;
+  }
+
+  /** Save current state through the attached storage adapter */
+  async saveToStorage(key: string, options: SerializationOptions = {}): Promise<PersistenceResult> {
+    if (!this.storageAdapter) return { success: false, error: 'No storage adapter attached' };
+    const serialized = await this.saveState(options);
+    return this.storageAdapter.save(key, serialized, options);
+  }
+
+  /** Load state from the attached storage adapter */
+  async loadFromStorage(key: string, options: LoadOptions = {}): Promise<PersistenceResult> {
+    if (!this.storageAdapter) return { success: false, error: 'No storage adapter attached' };
+    const serialized = await this.storageAdapter.load(key, options);
+    if (!serialized) return { success: false, error: `No data for key: ${key}` };
+    return this.loadState(serialized, options);
+  }
+
+  /** Delete a stored state via the adapter */
+  async deleteFromStorage(key: string): Promise<boolean> {
+    if (!this.storageAdapter) return false;
+    return this.storageAdapter.delete(key);
+  }
+
+  /** List keys from the adapter */
+  async listStorageKeys(): Promise<string[]> {
+    if (!this.storageAdapter) return [];
+    return this.storageAdapter.list();
+  }
+
+  /** Check if a key exists via the adapter */
+  async storageExists(key: string): Promise<boolean> {
+    if (!this.storageAdapter) return false;
+    return this.storageAdapter.exists(key);
+  }
+
+  /** Clear all stored data via the adapter */
+  async clearStorage(): Promise<boolean> {
+    if (!this.storageAdapter) return false;
+    return this.storageAdapter.clear();
+  }
+
+  /** Get storage statistics from the adapter */
+  async getStorageStats(): Promise<{ totalSize: number; keyCount: number; [key: string]: unknown } | null> {
+    if (!this.storageAdapter) return null;
+    return this.storageAdapter.getStats();
   }
 
   // Sprint 3.1 - API Consistency Methods

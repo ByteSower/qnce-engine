@@ -1,0 +1,8 @@
+{
+  "passages": [
+    { "pid": 1, "name": "Start", "text": "Hello", "tags": ["intro"], "links": [ { "name": "Next", "link": "Second" } ] },
+    { "pid": 2, "name": "Second", "text": "World", "links": [] }
+  ],
+  "startnode": 1,
+  "name": "Demo"
+}

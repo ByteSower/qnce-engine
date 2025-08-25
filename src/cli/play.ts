@@ -3,6 +3,7 @@
 import { readFileSync } from 'fs';
 import { createInterface } from 'readline';
 import { createQNCEEngine, loadStoryData } from '../engine/core.js';
+import { createStorageAdapter } from '../persistence/StorageAdapters.js';
 import { DEMO_STORY } from '../engine/demo-story.js';
 import type { Choice } from '../engine/core.js';
 
@@ -259,7 +260,7 @@ function main(): void {
   
   if (args.includes('--help') || args.includes('-h')) {
     console.log('QNCE Interactive CLI');
-    console.log('Usage: qnce-play [story-file.json]');
+  console.log('Usage: qnce-play [story-file.json] [--storage <type>] [--storage-prefix <p>] [--storage-dir <dir>] [--storage-db <name>] [--non-interactive] [--save-key <key>] [--load-key <key>]');
     console.log('');
     console.log('If no story file is provided, the demo story will be used.');
     console.log('');
@@ -269,7 +270,19 @@ function main(): void {
   }
   
   let storyData;
-  const storyFile = args[0];
+  // Parse args to find a positional story file (skip option values)
+  const optsWithValue = new Set(['--storage', '--storage-prefix', '--storage-dir', '--storage-db', '--save-key', '--load-key']);
+  let storyFile: string | undefined;
+  for (let i = 0; i < args.length; i++) {
+    const a = args[i];
+    if (a.startsWith('-')) {
+      if (optsWithValue.has(a)) i++; // skip its value
+      continue;
+    }
+    // first non-option token is treated as story file
+    storyFile = a;
+    break;
+  }
   
   if (storyFile) {
     try {
@@ -286,6 +299,70 @@ function main(): void {
   }
   
   const engine = createQNCEEngine(storyData);
+
+  // Storage adapter selection
+  const storageIdx = args.indexOf('--storage');
+  const storageType = storageIdx >= 0 ? args[storageIdx + 1] : undefined;
+  if (storageType) {
+    try {
+      const adapterOptions: any = {};
+      const idxPrefix = args.indexOf('--storage-prefix');
+      if (idxPrefix >= 0) adapterOptions.prefix = args[idxPrefix + 1];
+      const idxDir = args.indexOf('--storage-dir');
+      if (idxDir >= 0) adapterOptions.directory = args[idxDir + 1];
+      const idxDb = args.indexOf('--storage-db');
+      if (idxDb >= 0) adapterOptions.databaseName = args[idxDb + 1];
+
+      const adapter = createStorageAdapter(storageType as any, adapterOptions);
+      (engine as any).attachStorageAdapter?.(adapter);
+      console.log(`💾 Storage adapter attached: ${storageType}`);
+    } catch (e: any) {
+      console.error(`❌ Failed to attach storage adapter '${storageType}': ${e?.message || e}`);
+      process.exit(1);
+    }
+  }
+
+  // Non-interactive mode for scripting/tests
+  const nonInteractive = args.includes('--non-interactive');
+  const saveKeyIdx = args.indexOf('--save-key');
+  const saveKey = saveKeyIdx >= 0 ? args[saveKeyIdx + 1] : undefined;
+  const loadKeyIdx = args.indexOf('--load-key');
+  const loadKey = loadKeyIdx >= 0 ? args[loadKeyIdx + 1] : undefined;
+
+  if (nonInteractive) {
+    (async () => {
+      try {
+        if (loadKey) {
+          if ((engine as any).loadFromStorage) {
+            await (engine as any).loadFromStorage(loadKey);
+            console.log(`✅ Loaded state from key '${loadKey}'`);
+          } else {
+            console.warn('⚠️  No storage adapter attached; cannot load');
+          }
+        }
+        if (saveKey) {
+          if ((engine as any).saveToStorage) {
+            await (engine as any).saveToStorage(saveKey);
+            console.log(`✅ Saved state to key '${saveKey}'`);
+          } else {
+            console.warn('⚠️  No storage adapter attached; cannot save');
+          }
+        }
+        const summary: any = {
+          currentNodeId: engine.getState().currentNodeId,
+        };
+        if ((engine as any).listStorageKeys) {
+          try { summary.storageKeys = await (engine as any).listStorageKeys(); } catch {}
+        }
+        console.log(JSON.stringify(summary));
+        process.exit(0);
+      } catch (error: any) {
+        console.error('❌ Non-interactive run failed:', error?.message || error);
+        process.exit(1);
+      }
+    })();
+    return;
+  }
   const rl = createInterface({
     input: process.stdin,
     output: process.stdout

@@ -8,7 +8,8 @@
     "qnce-audit": "dist/cli/audit.js",
     "qnce-init": "dist/cli/init.js",
     "qnce-perf": "dist/cli/perf.js",
-    "qnce-play": "dist/cli/play.js"
+  "qnce-play": "dist/cli/play.js",
+  "qnce-import": "dist/cli/import.js"
   },
   "scripts": {
     "build": "tsc",
@@ -62,6 +63,9 @@
     "react-dom": "^18.3.1",
     "ts-jest": "^29.4.0",
     "typescript": "~5.8.3"
+  },
+  "dependencies": {
+    "ajv": "^8.12.0"
   },
   "peerDependencies": {
     "react": ">=16.8.0"

@@ -1,0 +1,8 @@
+{
+  "inkVersion": 20,
+  "knots": {
+    "start": { "text": "Hello", "choices": [ { "text": "Next", "target": "second" } ] },
+    "second": { "text": "World", "choices": [] }
+  },
+  "start": "start"
+}

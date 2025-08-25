@@ -4,15 +4,46 @@ The QNCE Engine includes powerful command-line tools for project management, per
 
 ## 🛠️ CLI Tools Overview
 
-QNCE Engine provides three main CLI tools:
+QNCE Engine provides four main CLI tools:
 
 | Tool | Purpose | Key Features |
 |------|---------|--------------|
 | **`qnce-init`** | Project scaffolding | Templates, quick setup, configuration |
+| **`qnce-import`** | Story import/normalize | Convert Custom JSON, Twison, minimal Ink into QNCE StoryData |
 | **`qnce-audit`** | Story validation | Dead-end detection, reference checking, performance analysis |
 | **`qnce-perf`** | Performance monitoring | Real-time dashboards, profiling, alerts |
+| **`qnce-play`** | Interactive play | Play stories in terminal; persistence via adapters |
 
-## 📦 Installation
+## � qnce-import - Story Import & Normalization
+
+Normalize external story formats into QNCE `StoryData`.
+
+### Basic Usage
+
+```bash
+qnce-import <input-file>|(stdin) [--out <file>|stdout] [--id-prefix <prefix>] [--format json|twison|ink] [--strict] [--experimental-ink]
+```
+
+### Options
+
+- `--format` json|twison|ink: Override auto-detection
+- `--out` file|stdout: Output destination (default stdout if piped)
+- `--strict`: Enforce JSON Schema validation; errors on unknown keys (Custom JSON)
+- `--id-prefix`: Namespace node IDs during import
+- `--experimental-ink`: Enable extra heuristics for Ink JSON (best-effort)
+
+### Exit Codes
+
+- 0: Success without schema warnings
+- 1: Success with schema warnings (lenient mode)
+- 2: Errors (parse/validation/IO failures)
+
+### Notes
+
+- Twison tags are mapped to `node.meta.tags` in the output. Post-process tags into flags/requirements if needed.
+- The engine performs a final validation pass via `loadStoryData` before writing.
+
+## �📦 Installation
 
 ### Global Installation (Recommended)
 
@@ -391,6 +422,46 @@ Global Options:
   --config, -c          Configuration file
   --help, -h           Show help
 ```
+
+## 🎮 qnce-play - Interactive Story Player
+
+Play QNCE stories in the terminal with undo/redo and optional persistence via StorageAdapters.
+
+### Basic Usage
+
+```bash
+qnce-play [story-file.json] [--storage <type>] [--storage-prefix <p>] [--storage-dir <dir>] [--storage-db <name>]
+```
+
+If no story file is provided, the demo story is used.
+
+### Non-interactive Mode (scriptable)
+
+```bash
+qnce-play [story-file.json] --non-interactive [--save-key <key>] [--load-key <key>] [--storage ...]
+```
+
+Outputs a final JSON line with at least:
+
+```json
+{ "currentNodeId": "start", "storageKeys": ["slot1"] }
+```
+
+### Storage Options
+
+- `--storage` memory|localStorage|sessionStorage|file|indexedDB
+- `--storage-prefix` prefix for local/session keys (browser)
+- `--storage-dir` directory for file storage (Node)
+- `--storage-db` database name for IndexedDB (browser)
+
+See: [Persistence Adapters](Persistence-Adapters)
+
+### Interactive Commands
+
+- 1-9: select choice
+- u/undo, r/redo
+- s/save, l/load (file-based save/load prompts)
+- f/flags, hist, h/help, q/quit
 
 ### Performance Dashboard
 

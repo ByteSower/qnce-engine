@@ -1,0 +1,18 @@
+{
+  "initialNodeId": "Start",
+  "nodes": [
+    {
+      "id": "Start",
+      "text": "Hello",
+  "meta": { "tags": ["intro"] },
+      "choices": [
+        { "text": "Next", "nextNodeId": "Second" }
+      ]
+    },
+    {
+      "id": "Second",
+      "text": "World",
+      "choices": []
+    }
+  ]
+}

@@ -1,6 +1,58 @@
 # Release Notes
+## 🚀 Version 1.3.0 - Story Import & Persistence (Sprint 4.0)
+
+**Release Date:** August 25, 2025  
+**NPM:** `npm install qnce-engine@1.3.0`
+
+### ✨ Highlights
+
+- New `qnce-import` CLI that normalizes external formats into QNCE StoryData
+  - Custom JSON with JSON Schema validation (strict/lenient)
+  - Twison/Twine JSON with tags → `node.meta.tags`, robust start detection, link mapping
+  - Minimal Ink JSON (developer preview); pass `--experimental-ink` for best effort
+- Storage adapters and engine helpers for persistence across backends
+  - Memory, LocalStorage, SessionStorage, File, IndexedDB
+  - Engine methods: `attachStorageAdapter`, `saveToStorage`, `loadFromStorage`, `listStorageKeys`, etc.
+- `qnce-play` CLI: storage flags and non-interactive mode for scripting/CI
+
+### 🧭 Migration Notes
+
+- Twison tags preserved under `node.meta.tags` (string[]). Non-breaking, optional to consume.
+- If you used custom import scripts, consider switching to `qnce-import` for consistency and validation.
+
+### 📦 Update
+
+```bash
+npm install qnce-engine@1.3.0
+```
+
 
 Complete version history and migration guides for QNCE Engine.
+
+## 🚀 Version 1.2.3 - Import Adapters & Tag Mapping
+
+**Release Date:** August 24, 2025  
+**NPM:** `npm install qnce-engine@1.2.3`
+
+### ✨ Highlights
+
+- Import CLI hardening and semantic validation for story normalization
+- Twison adapter: passage tags are now mapped into `node.meta.tags`
+- JSON Schema updated to allow `meta.tags` on narrative nodes
+- Improved start node detection and dangling link checks
+
+### 🧭 Migration Notes
+
+- Twison tags: Previously logged-only, tags are now preserved in output as `node.meta.tags: string[]`.
+  - This change is additive and non-breaking. Existing consumers can ignore `meta` or leverage tags for features.
+  - Optional: post-process tags into flags/requirements if your pipeline expects them.
+- CLI behavior and exit codes are unchanged: 0 (success), 1 (warnings in lenient mode), 2 (errors).
+
+### 📦 Update
+
+```bash
+npm install qnce-engine@1.2.3
+```
 
 ## � Version 1.2.2 - Security & Professional Standards Update
 
@@ -545,4 +597,4 @@ Special thanks to all contributors, beta testers, and the community for making Q
 
 ---
 
-*This documentation is maintained for QNCE Engine v1.2.2 with complete advanced feature set including Choice Validation, State Persistence, Conditional Choices, Autosave & Undo/Redo, and UI Components.*
+*This documentation is maintained for QNCE Engine v1.2.3 with complete advanced feature set including Choice Validation, State Persistence, Conditional Choices, Autosave & Undo/Redo, and UI Components.*

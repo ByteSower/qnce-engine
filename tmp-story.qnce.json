@@ -1,0 +1,10 @@
+{
+  "initialNodeId": "start",
+  "nodes": [
+    {
+      "id": "start",
+      "text": "hi",
+      "choices": []
+    }
+  ]
+}

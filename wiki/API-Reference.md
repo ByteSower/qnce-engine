@@ -65,6 +65,16 @@ const engine = createQNCEEngine(storyData, {
   enablePerformanceMode: true,
   enableBranching: true
 });
+
+// Persistence via StorageAdapter (Lane B)
+// Choose an adapter and attach to the engine
+import { createStorageAdapter } from '../persistence/StorageAdapters';
+const storage = createStorageAdapter('memory'); // 'localStorage' | 'sessionStorage' | 'file' | 'indexedDB'
+engine.attachStorageAdapter(storage);
+
+// Save/load helpers
+await engine.saveToStorage('slot1');
+await engine.loadFromStorage('slot1');
 ```
 
 ### QNCEEngine Class
@@ -1040,4 +1050,4 @@ engine.registerMigration({
 
 ---
 
-*This documentation is maintained for QNCE Engine v1.2.2 with advanced feature set including Choice Validation, State Persistence, Conditional Choices, Autosave & Undo/Redo, and UI Components.*
+*This documentation is maintained for QNCE Engine v1.3.0 with advanced feature set including Choice Validation, State Persistence, Conditional Choices, Autosave & Undo/Redo, and UI Components.*
