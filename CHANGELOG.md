@@ -5,7 +5,16 @@ All notable changes to the QNCE Engine will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-**📌 Current Version: [1.3.0] - 2025-08-25**
+**📌 Current Version: [1.3.1] - 2025-08-25**
+
+## [1.3.1] - 2025-08-25
+
+### Changed 📝
+
+- README updated for v1.3.0 features (qnce-import, persistence adapters, qnce-play storage + non-interactive)
+- NPM package republish to ensure accurate README on package page
+
+> Patch release to align public docs with 1.3.0 functionality. No code changes.
 
 ## [1.3.0] - 2025-08-25
 

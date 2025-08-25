@@ -2,7 +2,7 @@
 
 **Quantum Narrative Convergence Engine** - A framework-agnostic TypeScript library for creating interactive narrative experiences with quantum-inspired mechanics.
 
-> **🚀 Latest v1.2.3:** Documentation consistency update and version alignment; core features unchanged from v1.2.2 (state persistence, advanced branching with AI integration, autosave & undo/redo, conditional choices, React UI components).
+> **🚀 Latest v1.3.0 (Import & Persistence):** New `qnce-import` CLI (Custom JSON, Twison with tags→`meta.tags`, experimental Ink), persistence adapters (Memory, LocalStorage, SessionStorage, File, IndexedDB), and `qnce-play` support for storage backends and non-interactive runs.
 
 [![npm version](https://badge.fury.io/js/qnce-engine.svg)](https://badge.fury.io/js/qnce-engine)
 [![TypeScript](https://img.shields.io/badge/TypeScript-Ready-blue.svg)](https://www.typescriptlang.org/)
@@ -14,7 +14,7 @@
 - **Collapse:** Player choices "collapse" the narrative to a specific path, updating state and flags
 - **Entanglement:** Early decisions affect later outcomes, enabling complex, interconnected stories
 
-## ✨ Current Features (v1.2.3)
+## ✨ Current Features (v1.3.0)
 
 ### 💾 State Persistence & Checkpoints
 - **Complete save/load system** with data integrity validation
@@ -628,15 +628,32 @@ Stories are defined using JSON with the following structure:
 ```
 
 ## CLI Tools
-### Import compatibility (developer preview)
+### qnce-import (new in v1.3.0)
 
-Support matrix for qnce-import adapters:
+Normalize external story formats into QNCE StoryData with schema + semantic validation.
 
-- Custom JSON: supported (strict mode available)
-- Twison/Twine JSON: supported (passages, links, start detection). Tags are mapped to node.meta.tags.
-- Ink JSON: minimal support (knots/text/choices). Use `--experimental-ink` for best-effort extras.
+Supported formats:
+- Custom JSON: strict/lenient validation with JSON Schema
+- Twison/Twine JSON: passages, links, robust start detection; tags mapped to `node.meta.tags`
+- Ink JSON: minimal mapping (developer preview). Use `--experimental-ink` for extended best-effort mapping
 
-Tip: Use `--id-prefix` to namespace node IDs when merging sources.
+Usage examples:
+
+```bash
+# Autodetect format and write normalized JSON to stdout
+qnce-import path/to/story.json > story.normalized.json
+
+# Force a format and fail on schema/semantic issues
+qnce-import --format twison --strict input.json -o normalized.json
+
+# Add an ID prefix when merging multiple sources
+qnce-import --id-prefix libA_ a.json > a.norm.json
+
+# Read from stdin, write to file
+cat story.json | qnce-import --format custom -o out.json
+```
+
+Exit codes: 0 success, 1 validation failure, 2 unexpected error.
 
 
 ### qnce-audit
@@ -680,6 +697,24 @@ Features:
 - State inspection and debugging
 - Performance monitoring
 - Session save/load functionality
+- Persistence backends via `--storage` (memory | local | session | file | indexeddb)
+- Non-interactive runs for scripting/CI with JSON summary output
+
+Examples:
+
+```bash
+# Basic interactive play
+qnce-play story.json
+
+# Use file storage (directory configurable)
+qnce-play story.json --storage file --storage-dir .qnce --save-key session1
+
+# Resume a saved session
+qnce-play story.json --storage file --storage-dir .qnce --load-key session1
+
+# Scriptable non-interactive run (emits a JSON summary)
+qnce-play story.json --non-interactive --storage memory
+```
 
 ### qnce-perf
 
