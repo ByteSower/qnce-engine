@@ -1,0 +1,17 @@
+{
+  "initialNodeId": "start",
+  "nodes": [
+    {
+      "id": "start",
+      "text": "Hello",
+      "choices": [
+        { "text": "Next", "nextNodeId": "second" }
+      ]
+    },
+    {
+      "id": "second",
+      "text": "World",
+      "choices": []
+    }
+  ]
+}

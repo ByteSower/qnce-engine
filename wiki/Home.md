@@ -99,6 +99,7 @@ engine.makeChoice(0);
 | **[Performance Tuning](Performance-Tuning)** | Optimization, monitoring, and profiling | ⚡ Speed it up |
 | **[CLI Usage](CLI-Usage)** | Command-line tools and automation | 🛠️ Developer tools |
 | **[API Reference](API-Reference)** | Complete API documentation | 📖 Technical specs |
+| **[Persistence Adapters](Persistence-Adapters)** | How to save/load engine state across backends | 💾 Persistence |
 | **[Contributing](Contributing)** | How to contribute to the project | 🤝 Join us! |
 | **[Release Notes](Release-Notes)** | Version history and migration guides | 📋 What's new |
 
@@ -186,8 +187,8 @@ QNCE Engine is released under the [MIT License](https://github.com/ByteSower/qnc
 
 **Next:** [Getting Started →](Getting-Started)
 
-**All Pages:** [Getting Started](Getting-Started) • [Branching Guide](Branching-Guide) • [Performance Tuning](Performance-Tuning) • [CLI Usage](CLI-Usage) • [API Reference](API-Reference) • [Contributing](Contributing) • [Release Notes](Release-Notes)
+**All Pages:** [Getting Started](Getting-Started) • [Branching Guide](Branching-Guide) • [Performance Tuning](Performance-Tuning) • [CLI Usage](CLI-Usage) • [API Reference](API-Reference) • [Persistence Adapters](Persistence-Adapters) • [Contributing](Contributing) • [Release Notes](Release-Notes)
 
 ---
 
-*This documentation is maintained for QNCE Engine v1.2.2 with advanced feature set including Choice Validation, State Persistence, Conditional Choices, Autosave & Undo/Redo, and UI Components.*
+*This documentation is maintained for QNCE Engine v1.3.0 with advanced feature set including Choice Validation, State Persistence, Conditional Choices, Autosave & Undo/Redo, and UI Components.*

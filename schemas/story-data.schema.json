@@ -1,0 +1,68 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://qnce.dev/schemas/story-data.schema.json",
+  "title": "QNCE StoryData",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["nodes", "initialNodeId"],
+  "properties": {
+    "version": {
+      "type": "string",
+      "description": "Schema or content version for StoryData"
+    },
+    "initialNodeId": {
+      "type": "string",
+      "minLength": 1
+    },
+    "nodes": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "text", "choices"],
+        "properties": {
+          "id": { "type": "string", "minLength": 1 },
+          "text": { "type": "string" },
+          "choices": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["text", "nextNodeId"],
+              "properties": {
+                "text": { "type": "string" },
+                "nextNodeId": { "type": "string" },
+                "flagEffects": { "type": "object", "additionalProperties": true },
+                "flagRequirements": { "type": "object", "additionalProperties": true },
+                "timeRequirements": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "minTime": { "type": "number" },
+                    "maxTime": { "type": "number" },
+                    "availableAfter": { "type": "string", "format": "date-time" },
+                    "availableBefore": { "type": "string", "format": "date-time" }
+                  }
+                },
+                "inventoryRequirements": { "type": "object", "additionalProperties": { "type": "number" } },
+                "enabled": { "type": "boolean" },
+                "condition": { "type": "string" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "flags": {
+      "type": "object",
+      "description": "Optional initial flags",
+      "additionalProperties": true
+    },
+    "metadata": {
+      "type": "object",
+      "description": "Optional story metadata",
+      "additionalProperties": true
+    }
+  }
+}

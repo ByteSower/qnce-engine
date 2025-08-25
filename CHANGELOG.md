@@ -5,7 +5,30 @@ All notable changes to the QNCE Engine will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-**📌 Current Version: [1.2.3] - 2025-08-16**
+**📌 Current Version: [1.3.0] - 2025-08-25**
+
+## [1.3.0] - 2025-08-25
+
+### Added ✨
+
+- Story import CLI (`qnce-import`) with adapters:
+  - Custom JSON (strict/lenient validation with JSON Schema)
+  - Twison/Twine JSON (passages, links, robust start detection; tags mapped to `node.meta.tags`)
+  - Minimal Ink JSON (developer preview; enable `--experimental-ink` for richer mapping)
+- Persistence adapters (Memory, LocalStorage, SessionStorage, File, IndexedDB) with a simple factory
+- Engine integration helpers: `attachStorageAdapter`, `saveToStorage`, `loadFromStorage`, `listStorageKeys`, etc.
+- `qnce-play` CLI support for persistence backends and a scriptable non-interactive mode
+
+### Changed 🔧
+
+- Validation hardening: semantic checks for starting node and dangling links
+- Documentation: New wiki pages and CLI docs for import and persistence; examples expanded
+
+### Quality 🧪
+
+- New adapter and CLI tests; full suite green across Node and jsdom projects
+
+> This release delivers the Sprint 4.0 scope (Import + Persistence) as version 1.3.0.
 
 ## [1.2.3] - 2025-08-16
 

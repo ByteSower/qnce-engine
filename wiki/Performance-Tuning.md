@@ -4,7 +4,7 @@ This guide covers performance optimization techniques for QNCE Engine, including
 
 ## ⚡ Overview
 
-QNCE Engine v1.2.2 introduces enterprise-grade performance infrastructure designed to handle large-scale interactive narratives with minimal latency and memory usage.
+QNCE Engine v1.2.3 introduces enterprise-grade performance infrastructure designed to handle large-scale interactive narratives with minimal latency and memory usage.
 
 ### Performance Targets
 
@@ -608,4 +608,4 @@ engine.integrateWith('grafana', {
 
 ---
 
-*This documentation is maintained for QNCE Engine v1.2.2 with advanced feature set including Choice Validation, State Persistence, Conditional Choices, Autosave & Undo/Redo, and UI Components.*
+*This documentation is maintained for QNCE Engine v1.2.3 with advanced feature set including Choice Validation, State Persistence, Conditional Choices, Autosave & Undo/Redo, and UI Components.*

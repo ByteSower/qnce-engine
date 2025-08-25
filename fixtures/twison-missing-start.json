@@ -1,0 +1,6 @@
+{
+  "passages": [
+    { "pid": 10, "name": "Alpha", "text": "A", "links": [ { "name": "to B", "link": "Beta" } ] },
+    { "pid": 11, "name": "Beta", "text": "B" }
+  ]
+}

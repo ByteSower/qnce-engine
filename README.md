@@ -128,10 +128,6 @@ const complexStory = {
         {
           id: 'time-limited-escape',
           text: 'Escape through the secret passage',
-          nextNodeId: 'secret-escape',
-          condition: 'context.timeElapsed < 300 && flags.knowsSecretPath'
-        },
-        {
           id: 'sacrifice-play',
           text: 'Make the ultimate sacrifice',
           nextNodeId: 'heroic-end',
@@ -632,6 +628,16 @@ Stories are defined using JSON with the following structure:
 ```
 
 ## CLI Tools
+### Import compatibility (developer preview)
+
+Support matrix for qnce-import adapters:
+
+- Custom JSON: supported (strict mode available)
+- Twison/Twine JSON: supported (passages, links, start detection). Tags are mapped to node.meta.tags.
+- Ink JSON: minimal support (knots/text/choices). Use `--experimental-ink` for best-effort extras.
+
+Tip: Use `--id-prefix` to namespace node IDs when merging sources.
+
 
 ### qnce-audit
 

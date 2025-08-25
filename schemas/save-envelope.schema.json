@@ -1,0 +1,25 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://qnce.dev/schemas/save-envelope.schema.json",
+  "title": "QNCE Save Envelope",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "version",
+    "storyId",
+    "storyVersion",
+    "timestamp",
+    "engineVersion",
+    "checksum",
+    "payload"
+  ],
+  "properties": {
+    "version": { "type": "integer", "minimum": 1 },
+    "storyId": { "type": "string", "minLength": 1 },
+    "storyVersion": { "type": "string", "minLength": 1 },
+    "timestamp": { "type": "string", "format": "date-time" },
+    "engineVersion": { "type": "string" },
+    "checksum": { "type": "string" },
+    "payload": { "type": "object" }
+  }
+}
