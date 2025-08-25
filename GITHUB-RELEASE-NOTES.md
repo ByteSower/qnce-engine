@@ -1,3 +1,21 @@
+# QNCE Engine v1.3.0 — Story Import & Persistence 🚀
+
+## ✨ What’s New in v1.3.0
+
+### 📥 Story Import (Developer Preview)
+- New `qnce-import` CLI to normalize stories into QNCE StoryData
+- Adapters: Custom JSON (strict/lenient schema validation), Twison/Twine (tags → `node.meta.tags`, improved start detection), minimal Ink JSON (`--experimental-ink` for richer mapping)
+
+### 💾 Persistence Adapters
+- Memory, LocalStorage, SessionStorage, File, IndexedDB backends via `createStorageAdapter()`
+- Engine helpers: `attachStorageAdapter`, `saveToStorage`, `loadFromStorage`, `listStorageKeys`, and more
+- `qnce-play` adds `--storage` flags and `--non-interactive` mode for scripts/CI
+
+### 🧪 Quality
+- New unit and CLI tests for import and persistence flows
+- Docs and wiki updated (CLI Usage, Persistence Adapters, Release Notes)
+
+---
 # QNCE Engine v1.2.0 - Major Public Release 🚀
 
 ## 🎉 Welcome to the Public Release!
