@@ -6,6 +6,10 @@ Thank you for your interest in contributing to the Quantum Narrative Convergence
 
 This project and everyone participating in it is governed by our Code of Conduct. By participating, you are expected to uphold this code. Please report unacceptable behavior to the project maintainers.
 
+## 🔒 Security
+
+Security is a priority for QNCE Engine. Please review our [Security Policy](SECURITY.md) before contributing. If you discover a security vulnerability, please report it privately through [GitHub Security Advisories](https://github.com/ByteSower/qnce-engine/security/advisories/new) rather than through public issues.
+
 ## 🚀 Quick Start
 
 1. **Fork the repository** on GitHub

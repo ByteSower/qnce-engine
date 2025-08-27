@@ -1079,6 +1079,17 @@ npm run build:watch
 npm run lint
 ```
 
+## 🔒 Security
+
+QNCE Engine follows security best practices and provides guidance for secure usage:
+
+- **Vulnerability Reporting**: Please report security vulnerabilities privately via [GitHub Security Advisories](https://github.com/ByteSower/qnce-engine/security/advisories/new)
+- **Supported Versions**: Security updates are provided for current stable versions (1.3.x) and previous major version (1.2.x)
+- **Input Validation**: Always validate story data and user inputs from untrusted sources
+- **State Security**: Use QNCE's built-in integrity validation when loading serialized states
+
+For detailed security guidelines, see our [Security Policy](SECURITY.md).
+
 ## License
 
 MIT - See LICENSE file for details.
