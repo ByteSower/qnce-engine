@@ -16,9 +16,9 @@
     "build:watch": "tsc --watch",
     "build:examples": "tsc --outDir dist/examples --target ES2022 --module CommonJS --moduleResolution Node --strict --esModuleInterop --skipLibCheck --declaration false examples/persistence-demo.ts examples/autosave-undo-demo.ts",
     "lint": "eslint .",
-    "test": "./node_modules/.bin/jest",
-    "test:watch": "./node_modules/.bin/jest --watch",
-    "test:coverage": "./node_modules/.bin/jest --coverage",
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "test:coverage": "jest --coverage",
     "test:performance": "node scripts/performance-tests.js",
     "demo:performance": "npm run build && node scripts/performance-demo.js",
     "demo:quickstart": "npm run build && node examples/quickstart-demo.js",
@@ -38,7 +38,7 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/ByteSower/qnce-engine.git"
+    "url": "git+https://github.com/ByteSower/qnce-engine.git"
   },
   "homepage": "https://github.com/ByteSower/qnce-engine#readme",
   "bugs": {
