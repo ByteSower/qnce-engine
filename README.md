@@ -2,11 +2,14 @@
 
 **Quantum Narrative Convergence Engine** - A framework-agnostic TypeScript library for creating interactive narrative experiences with quantum-inspired mechanics.
 
-> **🚀 Latest v1.3.0 (Import & Persistence):** New `qnce-import` CLI (Custom JSON, Twison with tags→`meta.tags`, experimental Ink), persistence adapters (Memory, LocalStorage, SessionStorage, File, IndexedDB), and `qnce-play` support for storage backends and non-interactive runs.
+> **🚀 Latest v1.3.1 (Import & Persistence):** New `qnce-import` CLI (Custom JSON, Twison with tags→`meta.tags`, experimental Ink), persistence adapters (Memory, LocalStorage, SessionStorage, File, IndexedDB), and `qnce-play` support for storage backends and non-interactive runs.
 
 [![npm version](https://badge.fury.io/js/qnce-engine.svg)](https://badge.fury.io/js/qnce-engine)
+[![npm downloads](https://img.shields.io/npm/d18m/qnce-engine.svg)](https://www.npmjs.com/package/qnce-engine)
 [![TypeScript](https://img.shields.io/badge/TypeScript-Ready-blue.svg)](https://www.typescriptlang.org/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
+> New: Lightweight, privacy-safe telemetry (opt-in). CLI now supports `--telemetry` and `--telemetry-report`, with p50/p95 batch send latency. See the wiki: [Analytics & Telemetry](https://github.com/ByteSower/qnce-engine/blob/main/wiki/Analytics-and-Telemetry.md).
 
 ## Core Concepts
 

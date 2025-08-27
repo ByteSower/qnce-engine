@@ -3,6 +3,7 @@
 import { readFileSync } from 'fs';
 import { createInterface } from 'readline';
 import { createQNCEEngine, loadStoryData } from '../engine/core.js';
+import { createTelemetry, createTelemetryAdapter } from '../telemetry/core.js';
 import { createStorageAdapter } from '../persistence/StorageAdapters.js';
 import { DEMO_STORY } from '../engine/demo-story.js';
 import type { Choice } from '../engine/core.js';
@@ -15,6 +16,7 @@ import type { Choice } from '../engine/core.js';
 interface InteractiveSession {
   engine: ReturnType<typeof createQNCEEngine>;
   rl: ReturnType<typeof createInterface>;
+  telemetry?: ReturnType<typeof createTelemetry>;
 }
 
 function displayNode(session: InteractiveSession): void {
@@ -260,7 +262,7 @@ function main(): void {
   
   if (args.includes('--help') || args.includes('-h')) {
     console.log('QNCE Interactive CLI');
-  console.log('Usage: qnce-play [story-file.json] [--storage <type>] [--storage-prefix <p>] [--storage-dir <dir>] [--storage-db <name>] [--non-interactive] [--save-key <key>] [--load-key <key>]');
+    console.log('Usage: qnce-play [story-file.json] [--storage <type>] [--storage-prefix <p>] [--storage-dir <dir>] [--storage-db <name>] [--non-interactive] [--save-key <key>] [--load-key <key>] [--telemetry <console|file|none>] [--telemetry-file <path>] [--telemetry-sample <0..1>] [--telemetry-report]');
     console.log('');
     console.log('If no story file is provided, the demo story will be used.');
     console.log('');
@@ -271,7 +273,18 @@ function main(): void {
   
   let storyData;
   // Parse args to find a positional story file (skip option values)
-  const optsWithValue = new Set(['--storage', '--storage-prefix', '--storage-dir', '--storage-db', '--save-key', '--load-key']);
+  const optsWithValue = new Set([
+    '--storage',
+    '--storage-prefix',
+    '--storage-dir',
+    '--storage-db',
+    '--save-key',
+    '--load-key',
+    // telemetry flags with values
+    '--telemetry',
+    '--telemetry-file',
+    '--telemetry-sample'
+  ]);
   let storyFile: string | undefined;
   for (let i = 0; i < args.length; i++) {
     const a = args[i];
@@ -298,7 +311,22 @@ function main(): void {
     storyData = DEMO_STORY;
   }
   
-  const engine = createQNCEEngine(storyData);
+  // Telemetry flags
+  const telemetryIdx = args.indexOf('--telemetry');
+  const telemetryKind = telemetryIdx >= 0 ? (args[telemetryIdx + 1] || 'none') : 'none';
+  const telemetrySampleIdx = args.indexOf('--telemetry-sample');
+  const telemetrySample = telemetrySampleIdx >= 0 ? Math.max(0, Math.min(1, parseFloat(args[telemetrySampleIdx + 1]))) : undefined;
+  const telemetryFileIdx = args.indexOf('--telemetry-file');
+  const telemetryPath = telemetryFileIdx >= 0 ? args[telemetryFileIdx + 1] : undefined;
+  const telemetryReport = args.includes('--telemetry-report');
+
+  let telemetry: ReturnType<typeof createTelemetry> | undefined;
+  if (telemetryKind && telemetryKind !== 'none') {
+    const adapter = telemetryKind === 'file' ? createTelemetryAdapter('file', { path: telemetryPath || 'qnce-telemetry.ndjson' }) : createTelemetryAdapter('console');
+    telemetry = createTelemetry({ adapter, enabled: true, sampleRate: telemetrySample ?? (process.env.NODE_ENV === 'production' ? 0 : 0.25), defaultCtx: { engineVersion: '1.3.2', env: (process.env.NODE_ENV as any) || 'dev', sessionId: '' } });
+  }
+
+  const engine = createQNCEEngine(storyData, undefined, false, undefined, telemetry ? { telemetry, env: (process.env.NODE_ENV as any) || 'dev' } : undefined);
 
   // Storage adapter selection
   const storageIdx = args.indexOf('--storage');
@@ -355,6 +383,22 @@ function main(): void {
           try { summary.storageKeys = await (engine as any).listStorageKeys(); } catch {}
         }
         console.log(JSON.stringify(summary));
+          // If telemetry report requested in non-interactive mode, print it here before exit
+          if (telemetry && telemetryReport) {
+            await telemetry.flush();
+            const s = telemetry.stats();
+            console.log('\nTelemetry Report');
+            console.log('----------------');
+            console.log(`queued : ${s.queued}`);
+            console.log(`sent   : ${s.sent}`);
+            console.log(`dropped:${s.dropped}`);
+            if (typeof s.p50 === 'number' || typeof s.p95 === 'number') {
+              console.log(`p50 send latency: ${s.p50 ?? 'n/a'} ms`);
+              console.log(`p95 send latency: ${s.p95 ?? 'n/a'} ms`);
+              console.log('\nBatch send latency (ms):');
+              console.log(`p50: ${s.p50 ?? 'n/a'} | p95: ${s.p95 ?? 'n/a'}`);
+            }
+          }
         process.exit(0);
       } catch (error: any) {
         console.error('❌ Non-interactive run failed:', error?.message || error);
@@ -368,12 +412,34 @@ function main(): void {
     output: process.stdout
   });
   
-  const session: InteractiveSession = { engine, rl };
+  const session: InteractiveSession = { engine, rl, telemetry };
   
   startInteractiveSession(session).catch((error) => {
     console.error('❌ Session error:', error.message);
     process.exit(1);
   });
+
+  // Print telemetry report on exit
+  if (telemetry && telemetryReport) {
+    process.on('beforeExit', async () => {
+      await telemetry!.flush();
+      const s = telemetry!.stats();
+      // Minimal ASCII report
+      console.log('\nTelemetry Report');
+      console.log('----------------');
+      console.log(`queued : ${s.queued}`);
+      console.log(`sent   : ${s.sent}`);
+      console.log(`dropped:${s.dropped}`);
+      if (typeof s.p50 === 'number' || typeof s.p95 === 'number') {
+        console.log(`p50 send latency: ${s.p50 ?? 'n/a'} ms`);
+        console.log(`p95 send latency: ${s.p95 ?? 'n/a'} ms`);
+      }
+      if (typeof s.p50 === 'number' || typeof s.p95 === 'number') {
+        console.log('\nBatch send latency (ms):');
+        console.log(`p50: ${s.p50 ?? 'n/a'} | p95: ${s.p95 ?? 'n/a'}`);
+      }
+    });
+  }
 }
 
 // Run if called directly

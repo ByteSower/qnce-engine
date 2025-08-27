@@ -3,6 +3,7 @@
 import { readFileSync, writeFileSync } from 'fs';
 import { basename, resolve } from 'path';
 import type { StoryData } from '../engine/core.js';
+import { createTelemetry, createTelemetryAdapter } from '../telemetry/core.js';
 import { loadStoryData } from '../engine/core.js';
 import { CustomJSONAdapter } from '../adapters/story/CustomJSONAdapter.js';
 import { TwisonAdapter } from '../adapters/story/TwisonAdapter.js';
@@ -38,7 +39,7 @@ async function main(): Promise<void> {
   const args = process.argv.slice(2);
   const showHelp = args.length === 0 && process.stdin.isTTY;
   if (showHelp || args.includes('--help') || args.includes('-h')) {
-  console.log(`\nQNCE Import CLI\nUsage: qnce-import <input-file>|(read from stdin) [--out <file>|stdout] [--id-prefix <prefix>] [--format json|twison|ink] [--strict] [--experimental-ink]\n`);
+  console.log(`\nQNCE Import CLI\nUsage: qnce-import <input-file>|(read from stdin) [--out <file>|stdout] [--id-prefix <prefix>] [--format json|twison|ink] [--strict] [--experimental-ink] [--telemetry <console|file|none>] [--telemetry-file <path>] [--telemetry-sample <0..1>]\n`);
     process.exit(0);
   }
 
@@ -50,6 +51,20 @@ async function main(): Promise<void> {
   const idPrefix = idPrefixIndex >= 0 ? args[idPrefixIndex + 1] : '';
   const outIndex = args.indexOf('--out');
   const outArg = outIndex >= 0 ? args[outIndex + 1] : undefined;
+
+  // Telemetry flags
+  const telemetryIdx = args.indexOf('--telemetry');
+  const telemetryKind = telemetryIdx >= 0 ? (args[telemetryIdx + 1] || 'none') : 'none';
+  const telemetryFileIdx = args.indexOf('--telemetry-file');
+  const telemetryPath = telemetryFileIdx >= 0 ? args[telemetryFileIdx + 1] : undefined;
+  const telemetrySampleIdx = args.indexOf('--telemetry-sample');
+  const telemetrySample = telemetrySampleIdx >= 0 ? Math.max(0, Math.min(1, parseFloat(args[telemetrySampleIdx + 1]))) : undefined;
+
+  let telemetry: ReturnType<typeof createTelemetry> | undefined;
+  if (telemetryKind && telemetryKind !== 'none') {
+    const adapter = telemetryKind === 'file' ? createTelemetryAdapter('file', { path: telemetryPath || 'qnce-import.ndjson' }) : createTelemetryAdapter('console');
+    telemetry = createTelemetry({ adapter, enabled: true, sampleRate: telemetrySample ?? (process.env.NODE_ENV === 'production' ? 0 : 0.25), defaultCtx: { engineVersion: '1.3.2', env: (process.env.NODE_ENV as any) || 'dev', sessionId: `import-${Date.now()}` } });
+  }
 
   let raw: string;
   let inputName = 'stdin';
@@ -64,6 +79,7 @@ async function main(): Promise<void> {
   let exitCode = 0;
 
   try {
+    const t0 = Date.now();
     const json = JSON.parse(raw);
 
   let selected: { key: string; inst: any };
@@ -83,7 +99,7 @@ async function main(): Promise<void> {
     const normalized: StoryData = await selected.inst.load(json, { idPrefix, strict, experimentalInk });
 
     // Schema validation (strict enforces failure)
-    const schema = validateStoryData(normalized);
+  const schema = validateStoryData(normalized);
     if (!schema.valid) {
       const msg = `Schema validation failed with ${schema.errors?.length || 0} error(s).`;
       const fmtErrors = (schema.errors || []).map((e: any) => ` - ${(e.instancePath ?? e.dataPath) || ''} ${e.message || ''}`).join('\n');
@@ -133,7 +149,11 @@ async function main(): Promise<void> {
       }
     }
 
-    const story = loadStoryData(normalized);
+  const story = loadStoryData(normalized);
+
+  // Emit single load event with duration and warnings
+  const durationMs = Date.now() - t0;
+  try { telemetry?.emit({ type: 'import.load', payload: { inputName, format: selected.key, durationMs, warnings: exitCode }, ts: Date.now(), ctx: { sessionId: `import-${t0}`, engineVersion: '1.3.2' } as any }); } catch {}
 
     if (outArg && outArg !== 'stdout') {
       const outPath = resolve(outArg);
@@ -148,9 +168,11 @@ async function main(): Promise<void> {
       process.stdout.write(JSON.stringify(story, null, 2));
     }
 
-    process.exit(exitCode);
+  await telemetry?.flush();
+  process.exit(exitCode);
   } catch (err: any) {
     console.error('❌ Import failed:', err?.message || err);
+  try { await telemetry?.flush(); } catch {}
     process.exit(2);
   }
 }

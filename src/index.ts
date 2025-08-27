@@ -30,3 +30,7 @@ export {
   type ConditionContext,
   type CustomEvaluatorFunction
 } from './engine/condition.js';
+
+// Sprint 4.1: Telemetry primitives (experimental)
+export type { QEvent, Telemetry, TelemetryAdapter, TelemetryOptions } from './telemetry/types.js';
+export { createTelemetry, createTelemetryAdapter, ConsoleAdapter, FileAdapter } from './telemetry/core.js';

@@ -161,6 +161,10 @@ export class QNCEEngine {
   private isUndoRedoOperation: boolean = false;
   private storageAdapter?: StorageAdapter;
 
+  // Sprint 4.1: Telemetry support
+  private telemetry?: import('../telemetry/types').Telemetry;
+  private defaultTelemetryCtx?: import('../telemetry/types').QEvent['ctx'];
+
   public get flags(): Record<string, unknown> {
     return this.state.flags;
   }
@@ -181,7 +185,8 @@ export class QNCEEngine {
     storyData: StoryData, 
     initialState?: Partial<QNCEState>, 
     performanceMode: boolean = false,
-    threadPoolConfig?: Partial<ThreadPoolConfig>
+    threadPoolConfig?: Partial<ThreadPoolConfig>,
+    options?: { telemetry?: import('../telemetry/types').Telemetry; env?: 'dev' | 'test' | 'prod'; appVersion?: string; sessionId?: string; }
   ) {
     this.storyData = storyData;
     this.performanceMode = performanceMode;
@@ -200,6 +205,22 @@ export class QNCEEngine {
       flags: initialState?.flags || {},
       history: initialState?.history || [storyData.initialNodeId],
     };
+
+    // Telemetry wiring
+    this.telemetry = options?.telemetry;
+    if (this.telemetry) {
+      const sessionId = options?.sessionId || `${Date.now().toString(36)}-${Math.random().toString(36).slice(2,8)}`;
+      this.defaultTelemetryCtx = {
+        sessionId,
+        storyId: undefined,
+        appVersion: options?.appVersion,
+        engineVersion: PERSISTENCE_VERSION,
+        env: options?.env
+      };
+      try {
+        this.telemetry.emit({ type: 'session.start', payload: { initialNodeId: this.state.currentNodeId }, ts: Date.now(), ctx: this.defaultTelemetryCtx });
+      } catch {}
+    }
   }
 
   // Lane B: StorageAdapter integration
@@ -211,28 +232,40 @@ export class QNCEEngine {
   /** Save current state through the attached storage adapter */
   async saveToStorage(key: string, options: SerializationOptions = {}): Promise<PersistenceResult> {
     if (!this.storageAdapter) return { success: false, error: 'No storage adapter attached' };
-    const serialized = await this.saveState(options);
-    return this.storageAdapter.save(key, serialized, options);
+  const t0 = Date.now();
+  const serialized = await this.saveState(options);
+  const res = await this.storageAdapter.save(key, serialized, options);
+  try { this.telemetry?.emit({ type: 'storage.op', payload: { op: 'save', key, ms: Date.now() - t0, ok: !!res?.success }, ts: Date.now(), ctx: this.defaultTelemetryCtx! }); } catch {}
+  return res;
   }
 
   /** Load state from the attached storage adapter */
   async loadFromStorage(key: string, options: LoadOptions = {}): Promise<PersistenceResult> {
     if (!this.storageAdapter) return { success: false, error: 'No storage adapter attached' };
-    const serialized = await this.storageAdapter.load(key, options);
+  const t0 = Date.now();
+  const serialized = await this.storageAdapter.load(key, options);
     if (!serialized) return { success: false, error: `No data for key: ${key}` };
-    return this.loadState(serialized, options);
+  const res = await this.loadState(serialized, options);
+  try { this.telemetry?.emit({ type: 'storage.op', payload: { op: 'load', key, ms: Date.now() - t0, ok: !!res?.success }, ts: Date.now(), ctx: this.defaultTelemetryCtx! }); } catch {}
+  return res;
   }
 
   /** Delete a stored state via the adapter */
   async deleteFromStorage(key: string): Promise<boolean> {
     if (!this.storageAdapter) return false;
-    return this.storageAdapter.delete(key);
+  const t0 = Date.now();
+  const ok = await this.storageAdapter.delete(key);
+  try { this.telemetry?.emit({ type: 'storage.op', payload: { op: 'delete', key, ms: Date.now() - t0, ok }, ts: Date.now(), ctx: this.defaultTelemetryCtx! }); } catch {}
+  return ok;
   }
 
   /** List keys from the adapter */
   async listStorageKeys(): Promise<string[]> {
     if (!this.storageAdapter) return [];
-    return this.storageAdapter.list();
+  const t0 = Date.now();
+  const keys = await this.storageAdapter.list();
+  try { this.telemetry?.emit({ type: 'storage.op', payload: { op: 'list', count: keys.length, ms: Date.now() - t0, ok: true }, ts: Date.now(), ctx: this.defaultTelemetryCtx! }); } catch {}
+  return keys;
   }
 
   /** Check if a key exists via the adapter */
@@ -244,7 +277,10 @@ export class QNCEEngine {
   /** Clear all stored data via the adapter */
   async clearStorage(): Promise<boolean> {
     if (!this.storageAdapter) return false;
-    return this.storageAdapter.clear();
+  const t0 = Date.now();
+  const ok = await this.storageAdapter.clear();
+  try { this.telemetry?.emit({ type: 'storage.op', payload: { op: 'clear', ms: Date.now() - t0, ok }, ts: Date.now(), ctx: this.defaultTelemetryCtx! }); } catch {}
+  return ok;
   }
 
   /** Get storage statistics from the adapter */
@@ -326,7 +362,9 @@ export class QNCEEngine {
       };
     }
     
-    return findNode(this.storyData.nodes, this.state.currentNodeId);
+  const node = findNode(this.storyData.nodes, this.state.currentNodeId);
+  try { this.telemetry?.emit({ type: 'node.enter', payload: { nodeId: node.id }, ts: Date.now(), ctx: this.defaultTelemetryCtx! }); } catch {}
+  return node;
   }
 
   /**
@@ -350,7 +388,10 @@ export class QNCEEngine {
 
       try {
         // Evaluate the condition using the condition evaluator
-        return conditionEvaluator.evaluate(choice.condition, context);
+        const t0 = Date.now();
+        const res = conditionEvaluator.evaluate(choice.condition, context);
+        try { this.telemetry?.emit({ type: 'expression.evaluate', payload: { ok: true, ms: Date.now() - t0 }, ts: Date.now(), ctx: this.defaultTelemetryCtx! }); } catch {}
+        return res;
       } catch (error) {
         // Log condition evaluation errors but don't block other choices
         if (error instanceof ConditionEvaluationError) {
@@ -359,8 +400,10 @@ export class QNCEEngine {
             condition: choice.condition,
             nodeId: this.state.currentNodeId
           });
+          try { this.telemetry?.emit({ type: 'expression.evaluate', payload: { ok: false, error: 'ConditionEvaluationError' }, ts: Date.now(), ctx: this.defaultTelemetryCtx! }); } catch {}
         } else {
           console.warn(`[QNCE] Unexpected error evaluating choice condition:`, error);
+          try { this.telemetry?.emit({ type: 'engine.error', payload: { where: 'getAvailableChoices', error: (error as any)?.message || String(error) }, ts: Date.now(), ctx: this.defaultTelemetryCtx! }); } catch {}
         }
         
         // Return false for invalid conditions (choice won't be shown)
@@ -454,8 +497,11 @@ export class QNCEEngine {
         })
       : null;
 
-    const fromNodeId = this.state.currentNodeId;
+  const fromNodeId = this.state.currentNodeId;
     const toNodeId = choice.nextNodeId;
+
+  // Telemetry: choice.select
+  try { this.telemetry?.emit({ type: 'choice.select', payload: { fromNodeId, toNodeId, choiceText: choice.text }, ts: Date.now(), ctx: this.defaultTelemetryCtx! }); } catch {}
     
     // Create flow event for tracking narrative progression
     if (this.performanceMode) {
@@ -538,6 +584,9 @@ export class QNCEEngine {
       });
     }
   }
+
+  /** Flush telemetry (useful before process exit) */
+  async flushTelemetry(): Promise<void> { try { await this.telemetry?.flush(); } catch {} }
 
   resetNarrative(): void {
     // Sprint 3.5: Save state for undo before reset
@@ -1888,9 +1937,11 @@ export class QNCEEngine {
 export function createQNCEEngine(
   storyData: StoryData, 
   initialState?: Partial<QNCEState>, 
-  performanceMode: boolean = false
+  performanceMode: boolean = false,
+  threadPoolConfig?: Partial<ThreadPoolConfig>,
+  options?: { telemetry?: import('../telemetry/types').Telemetry; env?: 'dev' | 'test' | 'prod'; appVersion?: string; sessionId?: string; }
 ): QNCEEngine {
-  return new QNCEEngine(storyData, initialState, performanceMode);
+  return new QNCEEngine(storyData, initialState, performanceMode, threadPoolConfig, options);
 }
 
 /**
