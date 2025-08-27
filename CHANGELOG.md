@@ -5,7 +5,22 @@ All notable changes to the QNCE Engine will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-**📌 Current Version: [1.3.1] - 2025-08-25**
+**📌 Current Version: [1.3.2] - 2025-08-26**
+
+## [Unreleased]
+
+_Nothing yet._
+
+## [1.3.2] - 2025-08-26
+
+### chore(docs)
+
+- Fix README telemetry wiki link to absolute URL for npm rendering
+- Update README latest banner to v1.3.1
+
+### Notes
+
+- Docs-only patch. No runtime behavior changes.
 
 ## [1.3.1] - 2025-08-25
 
