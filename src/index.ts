@@ -43,4 +43,6 @@ export { Entangler } from './quantum/entangler.js';
 /** @experimental */
 export { Phase, type PhaseContext } from './quantum/phase.js';
 /** @experimental */
-export { FeatureFlags, type FeatureFlagsConfig } from './quantum/flags.js';
+export { FeatureFlags, type FeatureFlagsConfig } from './quantum/flags';
+/** @experimental */
+export { attachQuantumFeatures, type QuantumIntegration } from './quantum/integration';

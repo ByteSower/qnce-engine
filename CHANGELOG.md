@@ -15,6 +15,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - add: fluent builder prototype example to explore superposition/entanglement ergonomics (non-API)
 ### Added (Experimental)
 - quantum: add Entangler and Phase primitives exported as `@experimental`; include basic unit tests
+- quantum: add optional integration helper `attachQuantumFeatures(engine, flags?)` to opt-in quantum features (`isPhaseActive`, `entangle`) without changing defaults; covered by unit tests
 
 
 _Nothing yet._
