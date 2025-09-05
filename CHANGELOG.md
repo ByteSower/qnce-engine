@@ -9,6 +9,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Docs / Meta
+- annotate: mark core public API with JSDoc `@public` and telemetry exports with `@experimental` to signal stability per roadmap
+
+
 _Nothing yet._
 
 ## [1.3.2] - 2025-08-26

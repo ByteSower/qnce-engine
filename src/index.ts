@@ -32,5 +32,7 @@ export {
 } from './engine/condition.js';
 
 // Sprint 4.1: Telemetry primitives (experimental)
+/** @experimental */
 export type { QEvent, Telemetry, TelemetryAdapter, TelemetryOptions } from './telemetry/types.js';
+/** @experimental */
 export { createTelemetry, createTelemetryAdapter, ConsoleAdapter, FileAdapter } from './telemetry/core.js';

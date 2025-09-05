@@ -24,7 +24,8 @@
     "demo:quickstart": "npm run build && node examples/quickstart-demo.js",
     "demo:persistence": "npm run build:examples && node dist/examples/examples/persistence-demo.js",
     "demo:autosave": "npm run build:examples && node dist/examples/examples/autosave-undo-demo.js",
-    "prepublishOnly": "npm run build && npm run test"
+  "prepublishOnly": "npm run build && npm run test",
+  "dx:api-inventory": "node scripts/api-inventory.mjs"
   },
   "keywords": [
     "narrative",

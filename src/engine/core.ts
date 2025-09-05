@@ -122,6 +122,10 @@ function findNode(nodes: NarrativeNode[], id: string): NarrativeNode {
  * QNCE Engine - Core narrative state management
  * Framework agnostic implementation with object pooling integration
  */
+/**
+ * Main engine class.
+ * @public
+ */
 export class QNCEEngine {
   private state: QNCEState;
   public storyData: StoryData; // Made public for hot-reload compatibility
@@ -1934,6 +1938,10 @@ export class QNCEEngine {
 /**
  * Factory function to create a QNCE engine instance
  */
+/**
+ * Factory to create a QNCE engine instance.
+ * @public
+ */
 export function createQNCEEngine(
   storyData: StoryData, 
   initialState?: Partial<QNCEState>, 
@@ -1946,6 +1954,10 @@ export function createQNCEEngine(
 
 /**
  * Load story data from JSON
+ */
+/**
+ * Load and validate StoryData from JSON-like input.
+ * @public
  */
 export function loadStoryData(jsonData: unknown): StoryData {
   // Add validation here in the future

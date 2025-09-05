@@ -1,3 +1,6 @@
+# Local-only planning docs
+docs/ROADMAP-CHECKLIST.local.md
+docs/API-INVENTORY.local.md
 # Logs
 logs
 *.log
