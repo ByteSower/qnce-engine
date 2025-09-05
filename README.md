@@ -224,6 +224,10 @@ engine.clearConditionEvaluator();
 - **Expression Caching:** Conditions are compiled once and cached for subsequent evaluations
 - **Safe Evaluation:** All expressions are sanitized to prevent code injection
 - **Minimal Overhead:** Choice filtering adds <1ms to `getAvailableChoices()` calls
+
+## Examples
+
+- Opt‑in quantum helpers (FeatureFlags + attachQuantumFeatures): `examples/quantum-integration-demo.ts`
 - **Error Isolation:** Invalid conditions don't affect other choices in the same node
 
 ### ⚡ Performance Infrastructure
