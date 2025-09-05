@@ -13,6 +13,9 @@ module.exports = {
       testPathIgnorePatterns: [
         '<rootDir>/src/ui/'
       ],
+      moduleNameMapper: {
+        '^(\\.{1,2}/.*)\\.js$': '$1'
+      },
       transform: {
         '^.+\\.ts$': 'ts-jest',
       },

@@ -36,3 +36,9 @@ export {
 export type { QEvent, Telemetry, TelemetryAdapter, TelemetryOptions } from './telemetry/types.js';
 /** @experimental */
 export { createTelemetry, createTelemetryAdapter, ConsoleAdapter, FileAdapter } from './telemetry/core.js';
+
+// Sprint 4.2: Quantum primitives (experimental)
+/** @experimental */
+export { Entangler } from './quantum/entangler.js';
+/** @experimental */
+export { Phase, type PhaseContext } from './quantum/phase.js';
