@@ -1051,3 +1051,64 @@ engine.registerMigration({
 ---
 
 *This documentation is maintained for QNCE Engine v1.3.0 with advanced feature set including Choice Validation, State Persistence, Conditional Choices, Autosave & Undo/Redo, and UI Components.*
+
+---
+
+## 🧪 Experimental (Opt-in)
+
+These APIs are off by default. They only change behavior when you enable a feature flag.
+
+### FeatureFlags
+
+```ts
+type FeatureFlagsConfig = { [flag: string]: boolean };
+class FeatureFlags {
+  constructor(initial?: FeatureFlagsConfig);
+  enable(flag: string): void;
+  disable(flag: string): void;
+  isEnabled(flag: string): boolean;
+  getAll(): FeatureFlagsConfig;
+}
+```
+
+Common keys: `quantum.phases`, `quantum.entanglement`.
+
+### Phase
+
+```ts
+class Phase {
+  constructor(name: string, when?: (ctx: { flags: Record<string, unknown>; nodeId?: string }) => boolean);
+  isActive(ctx): boolean;
+}
+```
+
+### Entangler
+
+```ts
+class Entangler<TKey extends string = string> {
+  bind(from: TKey, to: TKey, transform?: (v: unknown) => unknown): this;
+  apply(flags: Record<string, unknown>): void;
+}
+```
+
+### attachQuantumFeatures
+
+```ts
+function attachQuantumFeatures(
+  engine: Pick<QNCEEngine, 'flags'>,
+  flags?: FeatureFlags | FeatureFlagsConfig
+): {
+  flags: FeatureFlags;
+  isPhaseActive(phase: Phase, ctx?: { nodeId?: string }): boolean; // needs 'quantum.phases'
+  entangle(configure: (e: Entangler) => Entangler): void;          // needs 'quantum.entanglement'
+  detach(): void;
+}
+```
+
+Example:
+
+```ts
+import { attachQuantumFeatures, FeatureFlags, Phase } from 'qnce-engine';
+const q = attachQuantumFeatures(engine, new FeatureFlags({ 'quantum.phases': true }));
+q.isPhaseActive(new Phase('alpha', ({ flags }) => !!flags.unlockAlpha));
+```

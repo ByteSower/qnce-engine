@@ -2,6 +2,8 @@
 
 Welcome to QNCE Engine! This guide will help you get up and running with creating interactive narratives using quantum-inspired mechanics.
 
+If you prefer a no-code path, start with the [Beginner Guide](Beginner-Guide).
+
 ## 📦 Installation
 
 ### Basic Installation

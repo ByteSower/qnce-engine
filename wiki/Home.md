@@ -95,6 +95,7 @@ engine.makeChoice(0);
 | Page | Description | Quick Link |
 |------|-------------|------------|
 | **[Getting Started](Getting-Started)** | Installation, basic usage, first steps | 🏁 Start here! |
+| **[Beginner Guide](Beginner-Guide)** | No-code: make and play a story via CLI | 🎉 New users |
 | **[Branching Guide](Branching-Guide)** | Advanced branching system and AI integration | 🌿 Power features |
 | **[Performance Tuning](Performance-Tuning)** | Optimization, monitoring, and profiling | ⚡ Speed it up |
 | **[CLI Usage](CLI-Usage)** | Command-line tools and automation | 🛠️ Developer tools |

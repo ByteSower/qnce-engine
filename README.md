@@ -17,7 +17,15 @@
 - **Collapse:** Player choices "collapse" the narrative to a specific path, updating state and flags
 - **Entanglement:** Early decisions affect later outcomes, enabling complex, interconnected stories
 
+New to coding? See the no-code [Beginner Guide](https://github.com/ByteSower/qnce-engine/blob/main/wiki/Beginner-Guide.md) to create and play a story from the terminal.
+
 ## ✨ Current Features (v1.3.0)
+
+### 🧪 Experimental (Opt-in)
+Early quantum helpers are available behind feature flags. They are off by default and safe to ignore. See the wiki for details and examples:
+
+- Experimental APIs: https://github.com/ByteSower/qnce-engine/blob/main/wiki/API-Reference.md#-experimental-opt-in
+- Release Notes (Unreleased): https://github.com/ByteSower/qnce-engine/blob/main/wiki/Release-Notes.md#unreleased
 
 ### 💾 State Persistence & Checkpoints
 - **Complete save/load system** with data integrity validation
