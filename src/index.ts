@@ -42,3 +42,5 @@ export { createTelemetry, createTelemetryAdapter, ConsoleAdapter, FileAdapter } 
 export { Entangler } from './quantum/entangler.js';
 /** @experimental */
 export { Phase, type PhaseContext } from './quantum/phase.js';
+/** @experimental */
+export { FeatureFlags, type FeatureFlagsConfig } from './quantum/flags.js';
