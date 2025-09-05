@@ -1,4 +1,20 @@
 # Release Notes
+## [Unreleased]
+
+Experimental additions (opt-in; no default behavior changes):
+
+- Feature flags utility (`FeatureFlags`) to gate experimental behaviors
+- Quantum primitives: `Entangler`, `Phase`
+- Integration helper: `attachQuantumFeatures(engine, flags?)` exposing `isPhaseActive` and `entangle`
+
+Use with:
+
+```ts
+import { attachQuantumFeatures, FeatureFlags, Phase } from 'qnce-engine';
+const q = attachQuantumFeatures(engine, new FeatureFlags({ 'quantum.phases': true }));
+q.isPhaseActive(new Phase('alpha', ({ flags }) => !!flags.unlockAlpha));
+```
+
 ## 🚀 Version 1.3.0 - Story Import & Persistence (Sprint 4.0)
 
 **Release Date:** August 25, 2025  

@@ -1232,3 +1232,18 @@ try {
   }
 }
 ```
+
+    ## 🧪 Experimental (Opt-in)
+
+    These are off by default and safe to import. Enable with `FeatureFlags` when ready to experiment.
+
+    ```ts
+    import { attachQuantumFeatures, FeatureFlags, Phase } from 'qnce-engine';
+    const engine = createQNCEEngine(story);
+    const q = attachQuantumFeatures(engine, new FeatureFlags({ 'quantum.phases': true, 'quantum.entanglement': true }));
+    const alpha = new Phase('alpha', ({ flags }) => !!flags.unlockAlpha);
+    q.isPhaseActive(alpha);
+    q.entangle(e => e.bind('a', 'b', v => Number(v) * 2));
+    ```
+
+    APIs: `FeatureFlags`, `Phase`, `Entangler`, `attachQuantumFeatures` (all `@experimental`).

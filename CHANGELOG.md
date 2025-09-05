@@ -16,6 +16,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added (Experimental)
 - quantum: add Entangler and Phase primitives exported as `@experimental`; include basic unit tests
 - quantum: add optional integration helper `attachQuantumFeatures(engine, flags?)` to opt-in quantum features (`isPhaseActive`, `entangle`) without changing defaults; covered by unit tests
+ - quantum: add FeatureFlags utility (`FeatureFlags`) to gate experimental behaviors; exported as `@experimental` with tests
 
 
 _Nothing yet._
