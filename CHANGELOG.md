@@ -11,6 +11,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Docs / Meta
 - annotate: mark core public API with JSDoc `@public` and telemetry exports with `@experimental` to signal stability per roadmap
+### Examples
+- add: fluent builder prototype example to explore superposition/entanglement ergonomics (non-API)
 
 
 _Nothing yet._
