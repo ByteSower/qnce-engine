@@ -11,12 +11,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Docs / Meta
 - annotate: mark core public API with JSDoc `@public` and telemetry exports with `@experimental` to signal stability per roadmap
+- docs: add Beginner Guide and Experimental (Opt-in) API section; link example in README
 ### Examples
 - add: fluent builder prototype example to explore superposition/entanglement ergonomics (non-API)
+- add: quantum integration example demonstrating `attachQuantumFeatures` and flags
 ### Added (Experimental)
 - quantum: add Entangler and Phase primitives exported as `@experimental`; include basic unit tests
 - quantum: add optional integration helper `attachQuantumFeatures(engine, flags?)` to opt-in quantum features (`isPhaseActive`, `entangle`) without changing defaults; covered by unit tests
  - quantum: add FeatureFlags utility (`FeatureFlags`) to gate experimental behaviors; exported as `@experimental` with tests
+ - quantum: add helper types (`FeatureFlagKey`, `EntangleTransform`, `PhasePredicate`, `PhasePredicateContext`) exported as `@experimental`
 
 
 _Nothing yet._

@@ -46,3 +46,10 @@ export { Phase, type PhaseContext } from './quantum/phase.js';
 export { FeatureFlags, type FeatureFlagsConfig } from './quantum/flags';
 /** @experimental */
 export { attachQuantumFeatures, type QuantumIntegration } from './quantum/integration';
+/** @experimental */
+export type {
+  FeatureFlagKey,
+  EntangleTransform,
+  PhasePredicate,
+  PhasePredicateContext
+} from './quantum/types';
