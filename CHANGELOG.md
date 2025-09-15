@@ -5,109 +5,80 @@ All notable changes to the QNCE Engine will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-**📌 Current Version: [1.3.2] - 2025-08-26**
+**📌 Current Version: [1.4.0] - 2025-09-14**
 
 ## [Unreleased]
+_Nothing yet._
+
+## [1.4.0] - 2025-09-14
 ### Performance
  - Added condition evaluator expression canonicalization (sanitized + interned) with LRU cache.
  - Enabled context object pooling for condition evaluation in performance mode (reduces allocation churn during heavy conditional choice filtering).
-- Instrumented PerfReporter with flush metrics (counters, latency percentiles, histogram buckets, snapshot API) to enable adaptive strategies.
-
+ - Instrumented PerfReporter with flush metrics (counters, latency percentiles, histogram buckets, snapshot API) to enable adaptive strategies.
  - Adaptive perf flush backoff (R2): exponential (capped at 500ms) delay introduced after consecutive background dispatch rejections to reduce queue pressure.
-
- - Added `condition-pooling.test.ts` covering expression interning reuse, context pooling behavior, and a 10k evaluation performance budget.
-- Added `perf-flush-metrics.test.ts` validating flush metrics counters, histogram, and percentile calculations.
-- Added `perf-backoff-suppression.test.ts` validating warning suppression env flag and adaptive backoff growth/reset.
-- Marked internal utils with @internal to keep API surface clean.
- - Dynamic batch sizing (R6): PerfReporter now adapts effective flush batch size based on backlog depth, p95 send latency tiers (<25ms / <50ms), and rejection streak shrinkage heuristics. Scales up to 3–4x base when healthy; shrinks to preserve throughput under pressure.
- - Rejection rate metric: `rejectionRate` (0–1) derived from accepted vs rejected flush attempts for rapid health assessment and future auto-tuning inputs.
- - Exposed `lastEffectiveBatchSize` in flush metrics snapshot to aid observability of adaptive sizing decisions.
- - Added `perf-dynamic-batch.test.ts` covering upscale (low latency + large backlog) and downscale (rejection streak) scenarios.
- - Environment flag `QNCE_SUPPRESS_PERF_WARN=1` (R1) documented for suppressing repetitive flush failure warnings in CI / test runs.
- - Extended internal debug accessor `__getInternalPerfDebug()` with sizing/backoff fields (`consecutiveRejects`, `backoffDelayMs`, `nextAllowedFlushTime`, `lastEffectiveBatchSize`).
- - NOTE: Dynamic batch sizing & rejectionRate are currently @beta; heuristics may evolve (thresholds and scaling formula not yet part of the stable contract).
- - Added adaptive batch sizing disable flag (`disableAdaptiveBatch` config or env `QNCE_DISABLE_ADAPTIVE_BATCH=1`) to force fixed flush batch size (deterministic benchmarking & CI stability). When disabled, backoff & rejection metrics remain active but scaling heuristics are bypassed. (@beta)
- - Added internal test-only latency injection helper `__injectLatencySample(ms)` on PerfReporter to synthesize latency samples for percentile & scaling heuristic tests. (@internal)
- - Flush metrics snapshot now includes `adaptiveEnabled` boolean to signal whether dynamic batch sizing heuristics were active for the captured interval. (@beta)
- - Added retry-once flush dispatch logic (R3 groundwork) with guarded single retry on initial rejection when latency healthy. (@beta)
- - Added EMA-smoothed p95 latency export `smoothedP95DispatchLatencyMs` for early stabilization experiments. (@beta)
+ - Dynamic batch sizing (R6): PerfReporter adapts flush batch size based on backlog depth, p95 latency tiers (<25ms / <50ms), and rejection streak shrinkage heuristics. Scales up to ~3–4x base when healthy; shrinks under pressure.
+ - Rejection rate metric: `rejectionRate` (0–1) for health assessment and future tuning inputs.
+ - Exposed `lastEffectiveBatchSize` and `adaptiveEnabled` in flush metrics snapshot for observability of sizing decisions. (@beta)
+ - Retry-once flush dispatch logic (R3 groundwork) with guarded single retry on initial rejection while latency healthy. (@beta)
+ - EMA-smoothed p95 latency export `smoothedP95DispatchLatencyMs` for early stabilization experimentation. (@beta)
  - Export additional observability fields: `backoffActive`, `consecutiveRejects`. (@beta)
- - Introduced optional adaptive sampling scaffold (env `QNCE_ADAPTIVE_SAMPLING=1`) – currently passive with simple rate-based strategy. (@beta, experimental)
+ - Introduced optional adaptive sampling scaffold (env `QNCE_ADAPTIVE_SAMPLING=1`) – currently passive simple rate strategy. (@beta, experimental)
+ - Added adaptive batch sizing disable flag (`disableAdaptiveBatch` or env `QNCE_DISABLE_ADAPTIVE_BATCH=1`) for deterministic benchmarking. (@beta)
+ - Internal test-only helpers: latency injection (`__injectLatencySample(ms)`) & thread pool override hook for deterministic retry simulation. (@internal)
 
-### Docs/Meta
-- Consolidated duplicate performance docs: merged `PERFORMANCE_GUIDE.md` into canonical `docs/PERFORMANCE.md` and removed the obsolete guide to prevent drift.
-- Added `docs/ROADMAP.md` capturing completed milestones and deferred refinement backlog.
-- Expanded roadmap with Phase 2 telemetry reliability & adaptive refinement track (retry, dynamic sampling, percentile smoothing, observability metrics) plus quantum perf & CLI tooling plans.
 ### Added
-- perf: condition evaluation micro-benchmark script (`npm run perf:conditions`) reporting cold vs warm p50/p95/min/max.
-- TimeoutSaveAdapter mock to simulate network timeouts for save operations (tests exercising retry attempts & telemetry attempts field).
-- Telemetry overflowStrategy option ('drop', 'drop-oldest', 'error') for configurable backpressure handling.
-- Engine option suppressTelemetryWarnings to silence benign queue overflow warnings in perf mode tests.
-  - Applied in performance-mode test suites to reduce console noise.
- - perf: environment flag `QNCE_SUPPRESS_PERF_WARN=1` suppresses perf flush warning logs (R1) in CI / test environments.
-
-### Tests
-- Added retry coverage for timeout scenarios (success within budget + failure exceeding cap) ensuring storage.op telemetry includes attempt counts.
- - Added `perf-adaptive-disable.test.ts` covering disabled adaptive sizing behavior (fixed batch size under backlog & high latency) and internal latency sample injection.
-### Added
-- engine: basic storage save retry/backoff policy (exponential with jitter) with configurable attempts via `setStorageRetryPolicy`
-- engine: internal logger injection replacing console.warn in core engine (optional `logger` in createQNCEEngine options)
- - engine: public `getLogger()` accessor and `dispose()` method to release telemetry, perf reporter, and thread pool resources
-### Fixed
-- performance: unref perf reporter flush interval & added dispose() to reduce open-handle leaks
-
+ - perf: condition evaluation micro-benchmark script (`npm run perf:conditions`) reporting cold vs warm p50/p95/min/max.
+ - TimeoutSaveAdapter mock to simulate network timeouts validating retry attempt telemetry.
+ - Telemetry `overflowStrategy` option ('drop', 'drop-oldest', 'error') for configurable backpressure handling.
+ - Engine option `suppressTelemetryWarnings` to silence benign queue overflow warnings in perf-mode tests (plus env `QNCE_SUPPRESS_PERF_WARN=1`).
+ - Engine storage save retry/backoff policy (exponential with jitter) configurable via `setStorageRetryPolicy`.
+ - Internal logger injection (replace `console.warn`) + public `getLogger()` accessor and `dispose()` method for resource cleanup.
+ - Quantum experimental primitives: Entangler, Phase, Measurement, FeatureFlags utility, helper types (`FeatureFlagKey`, `EntangleTransform`, `PhasePredicate`, `PhasePredicateContext`). (@experimental / @beta tagging alignment)
+ - Fluent builder prototype & quantum integration example.
 
 ### Changed 🔧
-- api: annotate experimental telemetry and quantum APIs with recognized TSDoc release tags (`@beta`) alongside `@experimental` to satisfy API Extractor
-- api: update re-exports to carry release tags consistently
+ - Annotated experimental telemetry & quantum APIs with recognized TSDoc release tags (`@beta`) alongside `@experimental` to satisfy API Extractor.
+ - Updated re-exports to consistently carry release tags.
+ - Hot-reload delta path optimized (100-node patch ~60ms -> <5ms) with tightened test threshold.
+ - Latency stats sample buffer cap reduced 200 -> 100 for lower memory and faster percentile calculations.
+ - Undo history snapshots trimmed (flags + nodeId only) reducing peak test memory (~495MB -> ~230MB) and interim cap tightened to 250MB.
+
+### Fixed 🐛
+ - Unref perf reporter flush interval & added `dispose()` to reduce open-handle leaks.
 
 ### Tooling 🛠️
-- api-extractor: treat `ae-missing-release-tag` as error to enforce tagging discipline
-- ci: add GitHub Actions workflow to build, test, and run API Extractor (fails on API drift); lint is non-blocking until repo is cleaned
-- scripts: make `dx:api-report` fail on errors and add `dx:api-warnings` helper
-- logger: introduce lightweight logger utility; replace console usage in CLI (import/play) with levels & quiet/verbose flags
+ - API Extractor: treat `ae-missing-release-tag` as an error enforcing tagging discipline.
+ - CI workflow: build, test, and run API Extractor (fails on API drift); lint currently non-blocking pending cleanup.
+ - Added `dx:api-report`, `dx:api-warnings`, `dx:api-inventory` scripts.
+ - Logger utility introduced; CLI (import/play) migrated to structured logging with quiet/verbose flags.
+ - Added Typedoc config and generation script (dev only).
 
 ### Docs / Meta
-- docs: add Error Handling & Debug guide (docs + wiki mirror) and link in README / wiki Home
-- annotate: mark core public API with JSDoc `@public` and telemetry exports with `@experimental` to signal stability per roadmap
-- docs: add Beginner Guide and Experimental (Opt-in) API section; link example in README
-- docs: add Deprecation Policy (DEPRECATION-POLICY.md) and Adapter Lifecycle reference (ADAPTER-LIFECYCLE.md)
- - docs: add initial Typedoc config and API Extractor setup (dev only)
+ - Consolidated duplicate performance docs: merged `PERFORMANCE_GUIDE.md` into canonical `docs/PERFORMANCE.md`.
+ - Added `docs/ROADMAP.md` with completed milestones & deferred backlog.
+ - Expanded roadmap for Phase 2 telemetry reliability & adaptive refinement (retry, dynamic sampling, percentile smoothing, observability metrics) plus quantum perf & CLI tooling plans.
+ - Added Error Handling & Debug guide + Deprecation Policy + Adapter Lifecycle reference.
+ - Added Beginner Guide & Experimental API section; README links updated.
+
+### Tests 🧪
+ - Added coverage: condition pooling, perf flush metrics, backoff suppression, dynamic batch sizing upscale/downscale, adaptive disable mode, retry scenarios (timeout success/failure), telemetry sampling & overflow strategies, latency stats, PerfReporter spans & flush timer, ThreadPool jobs & clean shutdown.
+ - Added negative-path telemetry tests (structured errors and storage op failures), adapter lifecycle suites, concurrency progression test, mock storage adapters (failing/flaky/slow), quantum primitives tests.
+ - Stabilized UI tests (removed React act warnings) and hot-reload perf threshold.
+ - Enabled `minimalTelemetry` in perf-focused suites; added memory delta assertions for stability.
+
+### Performance / Benchmarks
+ - Micro benchmarks (`perf:micro`, `perf:conditions`) & performance scripts for latency sampling and condition evaluation.
+ - Improved serialization & logging object formatting (avoid noisy `[object Object]`).
+
 ### Examples
-- add: fluent builder prototype example to explore superposition/entanglement ergonomics (non-API)
-- add: quantum integration example demonstrating `attachQuantumFeatures` and flags
-### Added (Experimental)
-- quantum: add Entangler and Phase primitives exported as `@experimental`; include basic unit tests
-- quantum: add optional integration helper `attachQuantumFeatures(engine, flags?)` to opt-in quantum features (`isPhaseActive`, `entangle`) without changing defaults; covered by unit tests
- - quantum: add FeatureFlags utility (`FeatureFlags`) to gate experimental behaviors; exported as `@experimental` with tests
- - quantum: add helper types (`FeatureFlagKey`, `EntangleTransform`, `PhasePredicate`, `PhasePredicateContext`) exported as `@experimental`
- - quantum: add Measurement primitive for sampling and stats (experimental) with unit tests
+ - Added quantum integration & fluent builder prototype examples.
 
-### Quality / Tests
-- tests: eliminate React act warnings in `AutosaveIndicator` and `UndoRedoControls` test suites; stabilized Undo/Redo UI test after prior duplication.
-- tests: add adapter lifecycle test suites (story & storage)
-- tests: add concurrency evaluation test for independent engine progression
-- tests: add negative-path telemetry cases: condition evaluation structuredError + expression.evaluate(ok=false); storage save/load/delete/clear failures emit storage.op ok=false
-- tests: tighten typings in telemetry tests (replace any-casts with QEvent, use public engine API)
-- tests: add mock storage adapters (failing, flaky, slow) with initial test coverage
-- tests: add telemetry sampling & overflow strategy coverage (drop vs drop-oldest), disabled->enabled toggle, stats latency p50/p95 assertions
- - tests: add PerfReporter unit tests (spans, record, summary, flush timer)
- - tests: add ThreadPool unit tests for simulated jobs and stats; ensure clean shutdown between tests
+### Notes
+ - Several performance features (adaptive sizing, sampling scaffold, smoothed p95) are marked @beta and may adjust thresholds & heuristics in 1.4.x minors.
+ - Experimental quantum APIs remain opt-in; stability targeted for a later 1.5.x track.
 
-### Performance / Tooling
-- perf: add micro-benchmark script (`npm run perf:micro`) for feature flags & measurement sampling
-- logger: improved object serialization to avoid `[object Object]` noise and handle circular references.
-- build: add API Extractor config (`dx:api-report`) and Typedoc generation script (`docs:typedoc`)
-- hot-reload: optimized delta application path (adaptive strategy) reducing 100-node patch from ~60ms to <5ms; test threshold tightened (<10ms)
-- memory: lightweight undo history snapshots (flags + nodeId only) cut peak test memory from ~495MB to ~230MB; interim cap tightened to 250MB
-- memory: added flag key/value pooling (interning short strings) to prevent duplicate allocations (baseline peak unchanged in synthetic test; enables future cumulative reductions with large flag sets)
-- telemetry: introduce `minimalTelemetry` engine option to emit compact scalar payloads for hot paths (node.enter, expression.evaluate) reducing per-event object allocation
- - telemetry: reduce latency stats sample buffer cap from 200 -> 100 (lower memory & faster percentile calc for small sample sets)
- - tests/perf: enable `minimalTelemetry` in performance-focused test suites (memory, hot-reload, conditional choices) to better reflect production perf mode and reduce allocation noise during benchmarks
- - tests/perf: stabilize core memory test by asserting on delta from a local baseline, avoiding cross-suite heap noise flakiness in CI
-
-
-_Nothing yet._
+---
+## [1.3.2] - 2025-08-26
 
 ## [1.3.2] - 2025-08-26
 
