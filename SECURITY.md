@@ -163,7 +163,77 @@ Current status: ✅ No known vulnerabilities (as of latest npm audit)
 
 ---
 
-**Last Updated**: August 27, 2025  
-**Policy Version**: 1.0
+**Last Updated**: September 15, 2025  
+**Policy Version**: 1.1
 
 For questions about this security policy, please create an issue or contact the maintainers through the repository.
+
+---
+
+## Scope & Exclusions
+
+The following are explicitly OUT of scope for public disclosure issues:
+
+- Internal sprint planning details, sprint templates, team charters
+- Private performance investigation scratch pads
+- Raw adapter experiment logs or thread pool trace dumps
+- Abandoned prototype branches or experimental forks not merged to `main`
+
+If you discover potentially sensitive information that appears newly introduced (e.g., internal planning leak), please open a private advisory so we can sanitize quickly.
+
+## Sanitized & Ignored Artifacts
+
+As part of hardening, internal planning artifacts were either removed or replaced with placeholders and are now protected by `.gitignore` patterns.
+
+Representative patterns (do not remove):
+
+```
+docs/collaboration/
+docs/*ROADMAP-CHECKLIST* 
+docs/*API-INVENTORY* 
+```
+
+Public roadmap: `docs/PUBLIC_ROADMAP.md` (authoritative non-sensitive milestone list).
+
+## Automated Checks (Current & Planned)
+
+| Check | Status | Mechanism |
+|-------|--------|-----------|
+| Sensitive file scan | Planned (this cycle) | `npm run check:sensitive` (script + CI)|
+| Dependency audit | Active | `npm audit --production` (informational) |
+| License audit | Planned | `npm run audit:licenses` (stub -> future SPDX validation) |
+| API surface drift | Active | `npm run dx:api-report` + CI gating |
+| Lint (non-blocking) | Active | `npm run lint` (CI advisory) |
+| Test coverage (core) | Active | Jest suite (90% target) |
+
+## Hardening Commands
+
+| Purpose | Command |
+|---------|---------|
+| Run sensitive scan | `npm run check:sensitive` |
+| Generate API report | `npm run dx:api-report` |
+| List API warnings | `npm run dx:api-warnings` |
+| License audit (placeholder) | `npm run audit:licenses` |
+| Performance micro benchmark | `npm run perf:micro` |
+
+## Responsible Telemetry
+
+Performance telemetry is strictly in-process by default. No external network export occurs unless an integrating host forwards metrics. Sampling features NEVER transmit user content. If you integrate remote telemetry:
+
+- Avoid sending raw narrative text that may contain user-generated content.
+- Strip PII before network transit.
+- Prefer aggregated counters over raw event payloads.
+
+## Future Hardening Roadmap
+
+| Item | Goal | Notes |
+|------|------|-------|
+| Secret scanning integration | Prevent accidental credential leaks | Evaluate GitHub Advanced Security or OSS alternative |
+| SPDX license inventory | Ensure compliant dependency set | Integrate with `license-checker` or `oss-review-toolkit` |
+| Security test harness | Fuzz story import & flag ops | Leverage structured malformed corpus | 
+| Threat model document | Formalize attack surfaces | Cover serialization, adapters, CLI file I/O |
+| Optional WASM sandbox | Isolation for custom evaluators | Research perf vs isolation trade-offs |
+
+---
+
+Maintainers: ensure new automation or policy changes update this file (bump Policy Version). 

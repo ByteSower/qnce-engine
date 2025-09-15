@@ -1,0 +1,46 @@
+name: Security & Integrity
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  schedule:
+    - cron: '0 3 * * 1' # weekly Monday 03:00 UTC
+
+jobs:
+  security:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Use Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build (type check)
+        run: npm run build
+
+      - name: Run tests
+        run: npm test -- --runInBand
+
+      - name: Sensitive file scan
+        run: node scripts/check-sensitive-files.mjs
+
+      - name: API surface drift (report only)
+        run: npm run dx:api-report || true
+
+      - name: Dependency audit (non-blocking)
+        run: npm audit --production || true
+
+      - name: License audit (placeholder, non-blocking)
+        run: npm run audit:licenses || true
+
+      - name: Summary
+        run: echo 'Security workflow completed (blocking build/tests/sensitive-scan).'

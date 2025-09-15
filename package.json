@@ -36,6 +36,8 @@
   "dx:api-inventory": "node scripts/api-inventory.mjs"
   , "docs:sync": "ts-node scripts/sync-docs.ts"
   , "docs:perf-snapshot": "ts-node scripts/update-performance-doc.ts"
+  , "check:sensitive": "node scripts/check-sensitive-files.mjs"
+  , "audit:licenses": "node scripts/license-audit.mjs"
   },
   "keywords": [
     "narrative",
