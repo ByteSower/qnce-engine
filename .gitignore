@@ -1,3 +1,10 @@
+# Internal planning / local-only artifacts (sanitized from repo)
+docs/collaboration/
+docs/*ROADMAP*.md
+!docs/PUBLIC_ROADMAP.md
+docs/*-CHECKLIST.local.md
+docs/*INVENTORY.local.md
+
 temp/
 etc/qnce-engine.api.md
 # Local-only planning docs

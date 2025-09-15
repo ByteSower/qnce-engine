@@ -231,6 +231,12 @@ qnce-engine/
 └── dist/                  # Built output
 ```
 
+### Internal Planning Artifacts
+
+Sprint boards, internal team charters, communication logs, and detailed roadmaps are intentionally **not** tracked in the public repository to reduce security and confidentiality risk. A sanitized forward-looking view is maintained in `docs/PUBLIC_ROADMAP.md`.
+
+If you have questions about direction or upcoming milestones, open a GitHub Discussion or reference the public roadmap. Do not attempt to restore removed planning documents from history—those removals are intentional.
+
 ## Release Process
 
 For maintainers creating releases, please follow the standardized process documented in [`RELEASE-PROCESS.md`](./RELEASE-PROCESS.md). This ensures consistent versioning and smooth releases.

@@ -2,7 +2,7 @@
 
 **Quantum Narrative Convergence Engine** - A framework-agnostic TypeScript library for creating interactive narrative experiences with quantum-inspired mechanics.
 
-> **🚀 Latest v1.3.1 (Import & Persistence):** New `qnce-import` CLI (Custom JSON, Twison with tags→`meta.tags`, experimental Ink), persistence adapters (Memory, LocalStorage, SessionStorage, File, IndexedDB), and `qnce-play` support for storage backends and non-interactive runs.
+> **🚀 Latest v1.4.0 (Adaptive Performance & Quantum Primitives):** Adaptive perf pipeline (dynamic batch sizing, backoff, guarded retry, smoothed p95), expanded telemetry metrics, structured logging, memory optimizations, and first experimental quantum primitives (Entangler, Phase, Measurement). Previous 1.3.x delivered import & persistence foundations.
 
 [![npm version](https://badge.fury.io/js/qnce-engine.svg)](https://badge.fury.io/js/qnce-engine)
 [![npm downloads](https://img.shields.io/npm/d18m/qnce-engine.svg)](https://www.npmjs.com/package/qnce-engine)
@@ -20,6 +20,10 @@
 - Error Handling & Debug (docs/ERROR-HANDLING-AND-DEBUG.md)
 - Adapter Lifecycle (docs/ADAPTER-LIFECYCLE.md)
 - Deprecation Policy (docs/DEPRECATION-POLICY.md)
+
+## Public Roadmap
+
+High-level, non-sensitive roadmap: [`docs/PUBLIC_ROADMAP.md`](./docs/PUBLIC_ROADMAP.md). Internal sprint artifacts are intentionally excluded from the repository for security/privacy.
 
 
 ## Core Concepts
