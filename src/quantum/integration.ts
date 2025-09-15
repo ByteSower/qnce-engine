@@ -1,11 +1,15 @@
-// Experimental: Optional integration helpers for quantum primitives behind feature flags
-// @experimental
+/**
+ * Optional integration helpers for quantum primitives behind feature flags
+ * @beta
+ * @experimental
+ */
 
 import type { QNCEEngine } from '../engine/core.js';
 import { Phase } from './phase.js';
 import { Entangler } from './entangler.js';
 import { FeatureFlags, type FeatureFlagsConfig } from './flags.js';
 
+/** @beta @experimental */
 export type QuantumIntegration = {
   isPhaseActive: (phase: Phase, ctx?: { nodeId?: string }) => boolean;
   entangle: (configure: (e: Entangler) => Entangler) => void;
@@ -18,6 +22,7 @@ export type QuantumIntegration = {
  * feature flags are enabled. This does not mutate engine behavior; it only provides
  * opt-in utilities that operate against engine.flags.
  */
+/** @beta @experimental */
 export function attachQuantumFeatures(
   engine: Pick<QNCEEngine, 'flags'>,
   flagsConfig?: FeatureFlags | FeatureFlagsConfig

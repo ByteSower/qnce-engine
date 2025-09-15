@@ -117,3 +117,10 @@ export const measurePerformance = {
     };
   }
 };
+
+// Ensure background thread pool timeouts are cleared after all tests to avoid open handle warnings
+import { shutdownThreadPool } from '../src/performance/ThreadPool';
+
+afterAll(async () => {
+  await shutdownThreadPool();
+});

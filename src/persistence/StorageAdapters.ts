@@ -47,14 +47,18 @@ export class MemoryStorageAdapter extends BaseAdapter {
 // Browser localStorage adapter
 export class LocalStorageAdapter extends BaseAdapter {
   protected prefix: string;
-  constructor(prefix: string = 'qnce:') { super(); this.prefix = prefix; }
+  constructor(prefix = 'qnce:') { super(); this.prefix = prefix; }
   protected k(key: string) { return this.prefix + key; }
 
   async save(key: string, data: SerializedState): Promise<PersistenceResult> {
     if (typeof localStorage === 'undefined') return this.buildResult(false, undefined, 'localStorage not available');
     const start = performance.now();
     const serialized = JSON.stringify(data);
-    try { localStorage.setItem(this.k(key), serialized); } catch (e:any) { return this.buildResult(false, undefined, e.message); }
+    try { localStorage.setItem(this.k(key), serialized); } catch (e: unknown) {
+      const err = e as { message?: unknown };
+      const msg = err && typeof err === 'object' && 'message' in err ? String(err.message) : 'unknown error';
+      return this.buildResult(false, undefined, msg);
+    }
     return this.buildResult(true, { size: serialized.length, duration: performance.now() - start });
   }
   async load(key: string): Promise<SerializedState | null> {
@@ -96,13 +100,17 @@ export class LocalStorageAdapter extends BaseAdapter {
 // Browser sessionStorage adapter
 export class SessionStorageAdapter extends BaseAdapter {
   private prefix: string;
-  constructor(prefix: string = 'qnce:') { super(); this.prefix = prefix; }
+  constructor(prefix = 'qnce:') { super(); this.prefix = prefix; }
   private k(key: string) { return this.prefix + key; }
   async save(key: string, data: SerializedState): Promise<PersistenceResult> {
     if (typeof sessionStorage === 'undefined') return this.buildResult(false, undefined, 'sessionStorage not available');
     const start = performance.now();
     const serialized = JSON.stringify(data);
-    try { sessionStorage.setItem(this.k(key), serialized); } catch (e:any) { return this.buildResult(false, undefined, e.message); }
+    try { sessionStorage.setItem(this.k(key), serialized); } catch (e: unknown) {
+      const err = e as { message?: unknown };
+      const msg = err && typeof err === 'object' && 'message' in err ? String(err.message) : 'unknown error';
+      return this.buildResult(false, undefined, msg);
+    }
     return this.buildResult(true, { size: serialized.length, duration: performance.now() - start });
   }
   async load(key: string): Promise<SerializedState | null> {
@@ -202,10 +210,10 @@ export class FileStorageAdapter extends BaseAdapter {
 // IndexedDB adapter (browser) - minimal implementation
 export class IndexedDBStorageAdapter extends BaseAdapter {
   private dbName: string;
-  private storeName: string = 'qnce_state';
-  constructor(databaseName: string = 'QNCE_DB') { super(); this.dbName = databaseName; }
+  private storeName = 'qnce_state';
+  constructor(databaseName = 'QNCE_DB') { super(); this.dbName = databaseName; }
 
-  private async withStore(mode: IDBTransactionMode, fn: (store: IDBObjectStore) => void): Promise<any> {
+  private async withStore(mode: IDBTransactionMode, fn: (store: IDBObjectStore) => void): Promise<unknown> {
     return new Promise((resolve, reject) => {
       const openReq = indexedDB.open(this.dbName, 1);
       openReq.onupgradeneeded = () => {
@@ -285,7 +293,10 @@ export function createStorageAdapter(type: 'localStorage', options?: { prefix?: 
 export function createStorageAdapter(type: 'sessionStorage', options?: { prefix?: string }): SessionStorageAdapter;
 export function createStorageAdapter(type: 'file', options: { directory: string }): FileStorageAdapter;
 export function createStorageAdapter(type: 'indexedDB', options?: { databaseName?: string }): IndexedDBStorageAdapter;
-export function createStorageAdapter(type: string, options: any = {}): AnyAdapter {
+export function createStorageAdapter(
+  type: string,
+  options: { prefix?: string; directory?: string; databaseName?: string } = {}
+): AnyAdapter {
   switch (type) {
     case 'memory': return new MemoryStorageAdapter();
     case 'localStorage': return new LocalStorageAdapter(options.prefix);

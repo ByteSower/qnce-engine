@@ -1,6 +1,7 @@
 import { StoryData } from './core.js';
 
 // Demo narrative data for QNCE Engine
+/** @public */
 export const DEMO_STORY: StoryData = {
   initialNodeId: 'start',
   nodes: [

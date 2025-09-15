@@ -102,6 +102,7 @@ engine.makeChoice(0);
 | **[Analytics & Telemetry](Analytics-and-Telemetry)** | Opt-in, privacy-safe pipeline and CLI reporting | 📈 Insights |
 | **[API Reference](API-Reference)** | Complete API documentation | 📖 Technical specs |
 | **[Persistence Adapters](Persistence-Adapters)** | How to save/load engine state across backends | 💾 Persistence |
+| **[Error Handling & Debug](Error-Handling-and-Debug)** | Structured errors, logging & diagnostics | 🧯 Reliability |
 | **[Contributing](Contributing)** | How to contribute to the project | 🤝 Join us! |
 | **[Release Notes](Release-Notes)** | Version history and migration guides | 📋 What's new |
 
@@ -189,7 +190,7 @@ QNCE Engine is released under the [MIT License](https://github.com/ByteSower/qnc
 
 **Next:** [Getting Started →](Getting-Started)
 
-**All Pages:** [Getting Started](Getting-Started) • [Branching Guide](Branching-Guide) • [Performance Tuning](Performance-Tuning) • [CLI Usage](CLI-Usage) • [Analytics & Telemetry](Analytics-and-Telemetry) • [API Reference](API-Reference) • [Persistence Adapters](Persistence-Adapters) • [Contributing](Contributing) • [Release Notes](Release-Notes)
+**All Pages:** [Getting Started](Getting-Started) • [Branching Guide](Branching-Guide) • [Performance Tuning](Performance-Tuning) • [CLI Usage](CLI-Usage) • [Analytics & Telemetry](Analytics-and-Telemetry) • [API Reference](API-Reference) • [Persistence Adapters](Persistence-Adapters) • [Error Handling & Debug](Error-Handling-and-Debug) • [Contributing](Contributing) • [Release Notes](Release-Notes)
 
 ---
 

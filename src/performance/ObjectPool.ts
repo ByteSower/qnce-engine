@@ -19,14 +19,14 @@ export class ObjectPool<T extends Poolable> {
   private pool: T[] = [];
   private createFn: () => T;
   private maxSize: number;
-  private created: number = 0;
-  private borrowed: number = 0;
-  private returned: number = 0;
+  private created = 0;
+  private borrowed = 0;
+  private returned = 0;
 
   constructor(
     createFn: () => T,
-    initialSize: number = 10,
-    maxSize: number = 100
+  initialSize = 10,
+  maxSize = 100
   ) {
     this.createFn = createFn;
     this.maxSize = maxSize;
@@ -66,7 +66,10 @@ export class ObjectPool<T extends Poolable> {
    */
   return(obj: T): void {
     if (!obj.isInUse()) {
-      console.warn('Attempting to return object that is not in use');
+      if (process.env.NODE_ENV !== 'production') {
+        // eslint-disable-next-line no-console
+        console.warn('Attempting to return object that is not in use');
+      }
       return;
     }
     
@@ -130,9 +133,9 @@ export class ObjectPool<T extends Poolable> {
  * Pooled Flow object for narrative state management
  */
 export class PooledFlow implements Poolable {
-  private _inUse: boolean = false;
-  public nodeId: string = '';
-  public timestamp: number = 0;
+  private _inUse = false;
+  public nodeId = '';
+  public timestamp = 0;
   public metadata: Record<string, unknown> = {};
   public transitions: string[] = [];
 
@@ -177,12 +180,12 @@ export class PooledFlow implements Poolable {
  * Pooled Node object for narrative content
  */
 export class PooledNode implements Poolable {
-  private _inUse: boolean = false;
-  public id: string = '';
-  public text: string = '';
+  private _inUse = false;
+  public id = '';
+  public text = '';
   public choices: unknown[] = [];
   public flags: Record<string, unknown> = {};
-  public lastAccessed: number = 0;
+  public lastAccessed = 0;
 
   constructor() {
     this.reset();
@@ -221,12 +224,12 @@ export class PooledNode implements Poolable {
  * Pooled Asset object for narrative resources
  */
 export class PooledAsset implements Poolable {
-  private _inUse: boolean = false;
-  public id: string = '';
-  public type: string = '';
+  private _inUse = false;
+  public id = '';
+  public type = '';
   public data: unknown = null;
-  public size: number = 0;
-  public loaded: boolean = false;
+  public size = 0;
+  public loaded = false;
 
   constructor() {
     this.reset();

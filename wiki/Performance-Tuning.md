@@ -512,6 +512,70 @@ if (memoryDiagnostics.usage > 50) {
 }
 ```
 
+## 🧠 Adaptive Flush & Dynamic Batch Sizing (Beta)
+
+Recent versions introduce adaptive heuristics in the perf/telemetry flush subsystem.
+
+| Feature | Purpose | Heuristic Summary | Status |
+|---------|---------|-------------------|--------|
+| Exponential Backoff | Reduce pressure after repeated dispatch failures | 20ms base doubling (cap 500ms) | Stable |
+| Dynamic Batch Sizing | Increase throughput under healthy latency; shrink during pressure | Upscale on backlog (>2×/4× base) with p95 <25ms / <50ms; shrink on streak ≥2 | Beta |
+| Rejection Rate | Quick health metric | rejected / (accepted + rejected) | Beta |
+| Effective Batch Size Export | Observability of adaptive decisions | `lastEffectiveBatchSize` in metrics snapshot | Beta |
+| Disable Adaptive Batch Flag | Deterministic baseline / diagnostics | config `disableAdaptiveBatch` or env `QNCE_DISABLE_ADAPTIVE_BATCH=1` | Beta |
+| Adaptive Enabled Flag | Snapshot signal if dynamic sizing active | `adaptiveEnabled` boolean in metrics snapshot | Beta |
+
+### Metrics Extensions
+```ts
+interface PerfFlushMetrics {
+  rejectionRate: number;          // 0..1
+  lastEffectiveBatchSize: number; // adaptive batch size actually used
+  adaptiveEnabled: boolean;       // true when dynamic batch heuristics active
+}
+```
+
+### Sizing Logic (Simplified)
+```ts
+if (consecutiveRejects >= 2) shrink();
+else if (backlog > base*4 && p95 < 50) upscale(≈4x cap);
+else if (backlog > base*2 && p95 < 25) upscale(≈3x cap);
+```
+
+### Usage
+```ts
+import { getPerfReporter } from 'qnce-engine/performance';
+const reporter = getPerfReporter();
+const m = reporter.getFlushMetrics();
+console.log(m.rejectionRate, m.lastEffectiveBatchSize, m.adaptiveEnabled);
+// Force fixed sizing for baseline
+// const fixed = getPerfReporter({ batchSize: 100, disableAdaptiveBatch: true });
+// m.adaptiveEnabled will be false when adaptive sizing disabled.
+```
+
+### Suppress Warning Noise
+```bash
+export QNCE_SUPPRESS_PERF_WARN=1
+```
+
+### Internal Debug (Not Stable)
+```ts
+// @ts-expect-error internal accessor
+console.log(reporter.__getInternalPerfDebug());
+```
+
+### Tuning Guidance
+| Scenario | Observation | Suggested Action |
+|----------|-------------|------------------|
+| High rejectionRate (>0.3) & small batch size | Sustained pressure | Investigate thread pool queueLimit or worker count |
+| Low rejectionRate (<0.05) & latency p95 <25ms & backlog large | Underutilization | Consider increasing base batch size to raise adaptive ceiling |
+| Frequent shrink cycles | Backoff triggering repeatedly | Verify downstream throughput (I/O bottlenecks?) |
+
+Beta Caveats:
+- Thresholds may change (latency tiers, backlog multipliers)
+- No smoothing over latency yet (instant p95)
+- Provide feedback with your workload metrics to help finalize heuristics
+
+
 #### Slow State Transitions
 
 ```typescript

@@ -9,6 +9,8 @@ import { CustomJSONAdapter } from '../adapters/story/CustomJSONAdapter.js';
 import { TwisonAdapter } from '../adapters/story/TwisonAdapter.js';
 import { InkAdapter } from '../adapters/story/InkAdapter.js';
 import { validateStoryData } from '../schemas/validateStoryData.js';
+import { createLogger, deriveLogLevel, Logger } from '../utils/logger';
+import type { StoryAdapter } from '../adapters/contracts';
 
 /**
  * QNCE Import CLI
@@ -38,15 +40,22 @@ async function readStdin(): Promise<string> {
 async function main(): Promise<void> {
   const args = process.argv.slice(2);
   const showHelp = args.length === 0 && process.stdin.isTTY;
+  const quiet = args.includes('--quiet');
+  const verbose = args.includes('--verbose');
+  const logger: Logger = createLogger({ level: deriveLogLevel({ quiet, verbose }) });
+
   if (showHelp || args.includes('--help') || args.includes('-h')) {
-  console.log(`\nQNCE Import CLI\nUsage: qnce-import <input-file>|(read from stdin) [--out <file>|stdout] [--id-prefix <prefix>] [--format json|twison|ink] [--strict] [--experimental-ink] [--telemetry <console|file|none>] [--telemetry-file <path>] [--telemetry-sample <0..1>]\n`);
+  logger.info(`\nQNCE Import CLI\nUsage: qnce-import <input-file>|(read from stdin) [--out <file>|stdout] [--id-prefix <prefix>] [--format json|twison|ink] [--strict] [--experimental-ink] [--telemetry <console|file|none>] [--telemetry-file <path>] [--telemetry-sample <0..1>] [--quiet|--verbose]\n`);
     process.exit(0);
   }
 
   const formatIdx = args.indexOf('--format');
   const format = formatIdx >= 0 ? args[formatIdx + 1] : undefined;
   const strict = args.includes('--strict');
-  const experimentalInk = args.includes('--experimental-ink');
+  // --experimental-ink flag retained for backward CLI compatibility (no-op). Ignored intentionally.
+  if (args.includes('--experimental-ink')) {
+    /* no-op legacy flag */
+  }
   const idPrefixIndex = args.indexOf('--id-prefix');
   const idPrefix = idPrefixIndex >= 0 ? args[idPrefixIndex + 1] : '';
   const outIndex = args.indexOf('--out');
@@ -63,7 +72,9 @@ async function main(): Promise<void> {
   let telemetry: ReturnType<typeof createTelemetry> | undefined;
   if (telemetryKind && telemetryKind !== 'none') {
     const adapter = telemetryKind === 'file' ? createTelemetryAdapter('file', { path: telemetryPath || 'qnce-import.ndjson' }) : createTelemetryAdapter('console');
-    telemetry = createTelemetry({ adapter, enabled: true, sampleRate: telemetrySample ?? (process.env.NODE_ENV === 'production' ? 0 : 0.25), defaultCtx: { engineVersion: '1.3.2', env: (process.env.NODE_ENV as any) || 'dev', sessionId: `import-${Date.now()}` } });
+  const envRaw = process.env.NODE_ENV;
+  const env = envRaw === 'production' ? 'prod' : (envRaw === 'test' ? 'test' : 'dev');
+  telemetry = createTelemetry({ adapter, enabled: true, sampleRate: telemetrySample ?? (env === 'prod' ? 0 : 0.25), defaultCtx: { engineVersion: '1.3.2', env, sessionId: `import-${Date.now()}` } });
   }
 
   let raw: string;
@@ -82,9 +93,9 @@ async function main(): Promise<void> {
     const t0 = Date.now();
     const json = JSON.parse(raw);
 
-  let selected: { key: string; inst: any };
+  let selected: { key: string; inst: StoryAdapter };
     if (format) {
-      const map: Record<string, any> = {
+  const map: Record<string, StoryAdapter> = {
         json: new CustomJSONAdapter(),
         twison: new TwisonAdapter(),
         ink: new InkAdapter()
@@ -92,24 +103,24 @@ async function main(): Promise<void> {
       if (!map[format]) throw new Error(`Unknown format: ${format}`);
       selected = { key: format, inst: map[format] };
     } else {
-      selected = detectAdapter(json);
-      console.log(`ℹ️  Detected format: ${selected.key} (from ${inputName})`);
+  selected = detectAdapter(json);
+  logger.info(`Detected format: ${selected.key} (from ${inputName})`);
     }
 
-    const normalized: StoryData = await selected.inst.load(json, { idPrefix, strict, experimentalInk });
+  const normalized: StoryData = await selected.inst.load(json as object, { idPrefix, strict });
 
     // Schema validation (strict enforces failure)
   const schema = validateStoryData(normalized);
     if (!schema.valid) {
       const msg = `Schema validation failed with ${schema.errors?.length || 0} error(s).`;
-      const fmtErrors = (schema.errors || []).map((e: any) => ` - ${(e.instancePath ?? e.dataPath) || ''} ${e.message || ''}`).join('\n');
+  const fmtErrors = (schema.errors || []).map((e: { instancePath?: string; dataPath?: string; message?: string }) => ` - ${(e.instancePath ?? e.dataPath) || ''} ${e.message || ''}`).join('\n');
       if (strict) {
-        console.error(`❌ ${msg}`);
-        if (fmtErrors) console.error(fmtErrors);
+        logger.error(msg);
+        if (fmtErrors) logger.error(fmtErrors);
         process.exit(2);
       } else {
-        console.warn(`⚠️  ${msg}`);
-        if (fmtErrors) console.warn(fmtErrors);
+        logger.warn(msg);
+        if (fmtErrors) logger.warn(fmtErrors);
         exitCode = Math.max(exitCode, 1);
       }
     }
@@ -128,10 +139,10 @@ async function main(): Promise<void> {
     if (!initialExists) {
       const msg = `Initial node '${normalized.initialNodeId}' does not exist in nodes`;
       if (strict) {
-        console.error(`❌ ${msg}`);
+        logger.error(msg);
         process.exit(2);
       } else {
-        console.warn(`⚠️  ${msg}`);
+        logger.warn(msg);
         exitCode = Math.max(exitCode, 1);
       }
     }
@@ -139,12 +150,12 @@ async function main(): Promise<void> {
       const msg = `Found ${invalidLinks.length} dangling link(s)`;
       const lines = invalidLinks.slice(0, 10).map(l => ` - ${l.from} -> ${l.to} (missing)`);
       if (strict) {
-        console.error(`❌ ${msg}`);
-        if (lines.length) console.error(lines.join('\n'));
+        logger.error(msg);
+        if (lines.length) logger.error(lines.join('\n'));
         process.exit(2);
       } else {
-        console.warn(`⚠️  ${msg}`);
-        if (lines.length) console.warn(lines.join('\n'));
+        logger.warn(msg);
+        if (lines.length) logger.warn(lines.join('\n'));
         exitCode = Math.max(exitCode, 1);
       }
     }
@@ -153,16 +164,16 @@ async function main(): Promise<void> {
 
   // Emit single load event with duration and warnings
   const durationMs = Date.now() - t0;
-  try { telemetry?.emit({ type: 'import.load', payload: { inputName, format: selected.key, durationMs, warnings: exitCode }, ts: Date.now(), ctx: { sessionId: `import-${t0}`, engineVersion: '1.3.2' } as any }); } catch {}
+  try { telemetry?.emit({ type: 'import.load', payload: { inputName, format: selected.key, durationMs, warnings: exitCode }, ts: Date.now(), ctx: { sessionId: `import-${t0}`, engineVersion: '1.3.2' } }); } catch {}
 
     if (outArg && outArg !== 'stdout') {
       const outPath = resolve(outArg);
       writeFileSync(outPath, JSON.stringify(story, null, 2));
-      console.log(`✅ Imported and normalized to ${outPath}`);
+  logger.success(`Imported and normalized to ${outPath}`);
     } else if (!outArg && inputName !== 'stdin') {
       const outPath = resolve(basename(inputName).replace(/\.[^.]+$/, '') + '.qnce.json');
       writeFileSync(outPath, JSON.stringify(story, null, 2));
-      console.log(`✅ Imported and normalized to ${outPath}`);
+  logger.success(`Imported and normalized to ${outPath}`);
     } else {
       // stdout
       process.stdout.write(JSON.stringify(story, null, 2));
@@ -170,8 +181,9 @@ async function main(): Promise<void> {
 
   await telemetry?.flush();
   process.exit(exitCode);
-  } catch (err: any) {
-    console.error('❌ Import failed:', err?.message || err);
+  } catch (err: unknown) {
+    const msg = err && typeof err === 'object' && 'message' in err ? String((err as { message?: unknown }).message) : String(err);
+    logger.error(`Import failed: ${msg}`);
   try { await telemetry?.flush(); } catch {}
     process.exit(2);
   }
@@ -179,8 +191,9 @@ async function main(): Promise<void> {
 
 const isMainModule = require.main === module;
 if (isMainModule) {
-  main().catch((e) => {
-    console.error('❌ Import failed:', e?.message || e);
+  main().catch((e: unknown) => {
+  const msg = e && typeof e === 'object' && 'message' in e ? String((e as { message?: unknown }).message) : String(e);
+  createLogger({ level: 'error' }).error(`Import failed: ${msg}`);
     process.exit(2);
   });
 }

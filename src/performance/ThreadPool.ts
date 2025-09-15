@@ -5,8 +5,10 @@
 interface WorkerLike {
   postMessage(data: unknown): void;
   terminate(): void;
-  addEventListener(type: string, listener: (event: any) => void): void;
-  removeEventListener(type: string, listener: (event: any) => void): void;
+  addEventListener(type: 'message', listener: (event: MessageEvent) => void): void;
+  addEventListener(type: 'error', listener: (event: ErrorEvent) => void): void;
+  removeEventListener(type: 'message', listener: (event: MessageEvent) => void): void;
+  removeEventListener(type: 'error', listener: (event: ErrorEvent) => void): void;
 }
 
 interface NavigatorLike {
@@ -14,8 +16,8 @@ interface NavigatorLike {
 }
 
 declare const navigator: NavigatorLike | undefined;
-declare const Worker: any;
-declare const window: any;
+declare const Worker: { new (scriptURL: string | URL, options?: unknown): WorkerLike } | undefined;
+declare const window: unknown;
 
 export interface QnceJob {
   id: string;
@@ -54,6 +56,8 @@ export class QnceThreadPool {
   private config: ThreadPoolConfig;
   private stats: ThreadPoolStats;
   private isShuttingDown = false;
+  // Track simulated timeouts so we can clear/unref them in tests to avoid open handle warnings
+  private fallbackTimeouts: Set<ReturnType<typeof setTimeout>> = new Set();
 
   constructor(config: Partial<ThreadPoolConfig> = {}) {
     this.config = {
@@ -146,21 +150,17 @@ export class QnceThreadPool {
    */
   async shutdown(timeoutMs = 5000): Promise<void> {
     this.isShuttingDown = true;
-    
     const startTime = Date.now();
-    
     // Wait for active jobs to complete or timeout
     while (this.activeJobs.size > 0 && (Date.now() - startTime) < timeoutMs) {
       await new Promise(resolve => setTimeout(resolve, 100));
     }
-    
     // Terminate all workers
-    for (const worker of this.workers) {
-      worker.terminate();
-    }
-    
+    for (const worker of this.workers) { worker.terminate(); }
     this.workers.length = 0;
     this.stats.activeWorkers = 0;
+    for (const t of this.fallbackTimeouts) { clearTimeout(t); }
+    this.fallbackTimeouts.clear();
   }
 
   /**
@@ -185,18 +185,22 @@ export class QnceThreadPool {
    * Web Workers for browser environment
    */
   private initializeWebWorkers(): void {
-    const workerCode = this.generateWebWorkerCode();
-    const workerBlob = new Blob([workerCode], { type: 'application/javascript' });
-    const workerUrl = URL.createObjectURL(workerBlob);
+  const workerCode = this.generateWebWorkerCode();
+  const workerBlob = new Blob([workerCode], { type: 'application/javascript' });
+  const workerUrl = URL.createObjectURL(workerBlob);
 
     for (let i = 0; i < this.config.maxWorkers; i++) {
       try {
-        const worker = new Worker(workerUrl);
+        if (!Worker) { throw new Error('Worker not available'); }
+        const worker = new Worker(workerUrl as unknown as URL);
         this.setupWorkerHandlers(worker, i);
         this.workers.push(worker);
         this.stats.activeWorkers++;
       } catch (error) {
-        console.warn(`Failed to create worker ${i}:`, error);
+        if (typeof process !== 'undefined' && process.env && process.env.NODE_ENV !== 'production') {
+          // eslint-disable-next-line no-console
+          console.warn(`Failed to create worker ${i}:`, error);
+        }
       }
     }
   }
@@ -219,15 +223,21 @@ export class QnceThreadPool {
       const mockWorker = {
         postMessage: (data: unknown) => {
           // Simulate async processing
-          setTimeout(() => {
+          const timeout = setTimeout(() => {
+            const payload = data as { jobId: string; payload: unknown };
             this.handleWorkerMessage({
               data: {
-                jobId: (data as any).jobId,
-                result: `Processed: ${JSON.stringify((data as any).payload)}`,
+                jobId: payload.jobId,
+                result: `Processed: ${JSON.stringify(payload.payload)}`,
                 success: true
               }
             } as MessageEvent);
+            this.fallbackTimeouts.delete(timeout);
           }, Math.random() * 100 + 50); // 50-150ms simulation
+          this.fallbackTimeouts.add(timeout);
+          // Prevent keeping Node process alive
+          const nodeTimer = timeout as unknown as NodeJS.Timeout;
+          if (typeof nodeTimer.unref === 'function') { nodeTimer.unref(); }
         },
         terminate: () => {},
         addEventListener: () => {},
@@ -318,8 +328,8 @@ export class QnceThreadPool {
    * Setup worker message handlers
    */
   private setupWorkerHandlers(worker: WorkerLike, workerId: number): void {
-    worker.addEventListener('message', (e: any) => this.handleWorkerMessage(e));
-    worker.addEventListener('error', (e: any) => this.handleWorkerError(e, workerId));
+    worker.addEventListener('message', (e: MessageEvent) => this.handleWorkerMessage(e));
+    worker.addEventListener('error', (e: ErrorEvent) => this.handleWorkerError(e, workerId));
   }
 
   /**
@@ -352,8 +362,12 @@ export class QnceThreadPool {
   /**
    * Handle worker errors
    */
-  private handleWorkerError(error: any, workerId: number): void {
-    console.error(`Worker ${workerId} error:`, error);
+  private handleWorkerError(error: ErrorEvent, workerId: number): void {
+    // In dev, this helps trace worker issues; silence in production builds
+    if (typeof process !== 'undefined' && process.env && process.env.NODE_ENV !== 'production') {
+      // eslint-disable-next-line no-console
+      console.error(`Worker ${workerId} error:`, error);
+    }
     // TODO: Implement worker recovery/restart logic
   }
 
@@ -409,6 +423,11 @@ export class QnceThreadPool {
     
     this.stats.workerUtilization = (this.activeJobs.size / this.config.maxWorkers) * 100;
   }
+
+  /**
+   * Dispose alias for shutdown
+   */
+  async dispose(): Promise<void> { await this.shutdown(1000); }
 }
 
 // Singleton instance for global access

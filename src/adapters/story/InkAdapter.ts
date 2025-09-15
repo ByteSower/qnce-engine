@@ -8,35 +8,34 @@ import type { ValidationResult } from '../../engine/validation';
 // This is intentionally a very light stub; real Ink JSON can be complex.
 export class InkAdapter implements StoryAdapter {
   async load(source: string | object, options?: AdapterOptions): Promise<StoryData> {
-    const obj: any = typeof source === 'string' ? JSON.parse(source) : source;
+  const obj: Record<string, unknown> = typeof source === 'string' ? JSON.parse(source) : (source as Record<string, unknown>);
     if (!obj || typeof obj !== 'object') throw new Error('Invalid Ink JSON');
 
     // Heuristic: accept a simplified format { knots: { [name]: { text, choices: [{ text, target }] } } , start?: string }
-    const knots = obj.knots || {};
+  type Knot = { text?: unknown; choices?: Array<{ text?: unknown; target?: unknown }> };
+  const knots = ((obj as { knots?: Record<string, Knot> }).knots) || {};
     const idPrefix = options?.idPrefix ?? '';
 
-    if (!(options as any)?.experimentalInk && (obj.inkVersion || obj.listDefs || obj.inkState)) {
-      console.warn('[QNCE] Ink JSON appears complex; using minimal adapter. Pass experimentalInk to attempt richer import.');
-    }
+    // Silently proceed in non-experimental mode; no console noise in library code
 
     const nodes = Object.keys(knots).map((k) => ({
       id: `${idPrefix}${k}`,
-      text: String(knots[k].text ?? ''),
-      choices: Array.isArray(knots[k].choices)
-        ? knots[k].choices.map((c: any) => ({ text: String(c.text ?? ''), nextNodeId: `${idPrefix}${c.target}` }))
+      text: String((knots[k] as Knot | undefined)?.text ?? ''),
+      choices: Array.isArray((knots[k] as Knot | undefined)?.choices)
+        ? ((knots[k] as Knot).choices as Array<{ text?: unknown; target?: unknown }>).map((c) => ({ text: String(c.text ?? ''), nextNodeId: `${idPrefix}${String(c.target ?? '')}` }))
         : [],
     }));
 
-    const initialNodeId = `${idPrefix}${(obj.start ?? Object.keys(knots)[0] ?? 'start')}`;
+    const initialNodeId = `${idPrefix}${(((obj as { start?: unknown }).start as string) ?? Object.keys(knots)[0] ?? 'start')}`;
     return { initialNodeId, nodes } as StoryData;
   }
 
-  validate(_storyData: StoryData): ValidationResult { return { isValid: true }; }
+  validate(): ValidationResult { return { isValid: true }; }
 
   detect(source: unknown): boolean {
-    let obj: any = source;
+  let obj: unknown = source;
     if (typeof source === 'string') { try { obj = JSON.parse(source); } catch { return false; } }
-    return !!obj && typeof obj === 'object' && (!!obj.knots || !!obj.inkVersion);
+  return !!obj && typeof obj === 'object' && ('knots' in obj || 'inkVersion' in obj);
   }
 }
 

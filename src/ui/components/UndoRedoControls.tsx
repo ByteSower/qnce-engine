@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { UndoRedoControlsProps, defaultTheme, QNCETheme } from '../types';
 import { useUndoRedo } from '../../integrations/react';
 
@@ -13,6 +13,7 @@ import { useUndoRedo } from '../../integrations/react';
  * - Accessible with ARIA labels and keyboard navigation
  * - Customizable themes and layouts
  * - Integration with QNCE Engine undo/redo system
+ * @public
  */
 export const UndoRedoControls: React.FC<UndoRedoControlsProps> = ({
   engine,

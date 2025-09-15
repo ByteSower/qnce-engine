@@ -4,9 +4,7 @@
 import { QNCEEngine, createQNCEEngine, StoryData, QNCEState } from '../src/engine/core';
 import { 
   AutosaveConfig, 
-  UndoRedoConfig, 
-  UndoRedoResult, 
-  AutosaveResult 
+  UndoRedoConfig
 } from '../src/engine/types';
 
 // Test story data for autosave and undo/redo tests
@@ -97,8 +95,7 @@ describe('QNCE Engine - Sprint 3.5: Autosave & Undo/Redo', () => {
       engine.configureUndoRedo({ enabled: true });
     });
 
-    test('should track state changes for undo', () => {
-      const initialState = engine.getState();
+  test('should track state changes for undo', () => {
       
       // Make a choice
       const choices = engine.getAvailableChoices();
@@ -141,7 +138,7 @@ describe('QNCE Engine - Sprint 3.5: Autosave & Undo/Redo', () => {
       // Make a choice
       const choices = engine.getAvailableChoices();
       engine.selectChoice(choices[0]); // Go left
-      const afterChoiceState = JSON.parse(JSON.stringify(engine.getState())); // Deep copy
+  // Advance state then undo/redo to verify stacks
       
       // Undo the choice
       engine.undo();
@@ -162,8 +159,7 @@ describe('QNCE Engine - Sprint 3.5: Autosave & Undo/Redo', () => {
       expect(engine.canRedo()).toBe(false);
     });
 
-    test('should track flag changes for undo', () => {
-      const initialState = engine.getState();
+  test('should track flag changes for undo', () => {
       
       // Set a flag
       engine.setFlag('test_flag', 'test_value');
@@ -611,7 +607,7 @@ describe('QNCE Engine - Sprint 3.5: Autosave & Undo/Redo', () => {
     });
 
     test('should work with performance mode', () => {
-      const perfEngine = createQNCEEngine(testStoryData, undefined, true);
+  const perfEngine = createQNCEEngine(testStoryData, undefined, true, undefined, { suppressTelemetryWarnings: true });
       perfEngine.configureUndoRedo({ enabled: true });
       
       // Make a choice in performance mode

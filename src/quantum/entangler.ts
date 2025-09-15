@@ -1,8 +1,12 @@
-// Experimental: Entangler primitive for declarative variable binding
-// @experimental
+/**
+ * Entangler primitive for declarative variable binding
+ * @beta
+ * @experimental
+ */
 
 export type TransformFn = (value: unknown) => unknown;
 
+/** @beta @experimental */
 export class Entangler<TKey extends string = string> {
   private bindings: Array<{ from: TKey; to: TKey; transform?: TransformFn }> = [];
 

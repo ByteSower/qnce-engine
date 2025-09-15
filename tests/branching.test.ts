@@ -3,10 +3,7 @@
 
 import { QNCEBranchingEngine, createBranchingEngine } from '../src/narrative/branching/engine-simple';
 import { 
-  QNCEStory, 
-  Chapter, 
-  NarrativeFlow, 
-  BranchPoint,
+  QNCEStory,
   AIBranchingContext 
 } from '../src/narrative/branching/models';
 import { QNCEState } from '../src/engine/core';
@@ -393,8 +390,8 @@ describe('QNCE Branching System', () => {
     test('should update popular branches tracking', async () => {
       await engine.executeBranch('left-option');
       
-      const analytics = engine.getBranchingAnalytics();
-      // Note: This test checks internal state, might need adjustment based on implementation
+  // Trigger analytics update to ensure no errors; specific assertions depend on implementation
+  engine.getBranchingAnalytics();
     });
   });
 

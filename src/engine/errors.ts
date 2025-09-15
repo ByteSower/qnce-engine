@@ -6,6 +6,7 @@ import { ValidationResult } from './validation';
 
 /**
  * Base class for all QNCE-specific errors
+ * @public
  */
 export class QNCEError extends Error {
   public readonly errorCode: string;
@@ -29,6 +30,7 @@ export class QNCEError extends Error {
 /**
  * Error thrown when navigation to a node fails
  * Used by goToNodeById() and related navigation methods
+ * @public
  */
 export class QNCENavigationError extends QNCEError {
   public readonly nodeId?: string;
@@ -45,6 +47,7 @@ export class QNCENavigationError extends QNCEError {
 /**
  * Error thrown when choice validation fails
  * Provides detailed information about why the choice is invalid
+ * @public
  */
 export class ChoiceValidationError extends QNCEError {
   public readonly choice: Choice;

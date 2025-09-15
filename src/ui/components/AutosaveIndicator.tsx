@@ -15,6 +15,7 @@ import { useAutosave } from '../../integrations/react';
  * - Timestamp of last successful save
  * - Auto-hide functionality
  * - Accessible with proper ARIA labels
+ * @public
  */
 export const AutosaveIndicator: React.FC<AutosaveIndicatorProps> = ({
   engine,
@@ -36,7 +37,7 @@ export const AutosaveIndicator: React.FC<AutosaveIndicatorProps> = ({
   const { isEnabled, lastAutosave, isSaving } = useAutosave(engine);
   const [visible, setVisible] = useState(true);
   const [isAnimating, setIsAnimating] = useState(false);
-  const [lastSaveSuccessful, setLastSaveSuccessful] = useState(true);
+  const [lastSaveSuccessful] = useState(true);
 
   // Determine status based on hook values
   const status: AutosaveStatus = useMemo(() => {

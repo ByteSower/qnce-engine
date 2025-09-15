@@ -22,7 +22,7 @@ interface TwisonDocument {
 
 export class TwisonAdapter implements StoryAdapter {
   async load(source: string | object, options?: AdapterOptions): Promise<StoryData> {
-    const doc: TwisonDocument = typeof source === 'string' ? JSON.parse(source) : (source as any);
+  const doc: TwisonDocument = typeof source === 'string' ? JSON.parse(source) : (source as TwisonDocument);
     if (!doc || !Array.isArray(doc.passages)) throw new Error('Invalid Twison document');
 
     const idPrefix = options?.idPrefix ?? '';
@@ -65,16 +65,16 @@ export class TwisonAdapter implements StoryAdapter {
     return { initialNodeId, nodes } as StoryData;
   }
 
-  validate(_storyData: StoryData): ValidationResult {
+  validate(): ValidationResult {
     return { isValid: true };
   }
 
   detect(source: unknown): boolean {
-    let obj: any = source;
+    let obj: unknown = source;
     if (typeof source === 'string') {
       try { obj = JSON.parse(source); } catch { return false; }
     }
-    return !!obj && Array.isArray(obj.passages);
+    return typeof obj === 'object' && obj !== null && Array.isArray((obj as Partial<TwisonDocument>).passages);
   }
 }
 

@@ -14,6 +14,7 @@ import { NarrativeNode, QNCEState } from '../../engine/core';
 
 /**
  * Top-level story container with branching metadata
+ * @public
  */
 export interface QNCEStory {
   id: string;

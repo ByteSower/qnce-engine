@@ -16,7 +16,9 @@ import { useUndoRedo } from '../../integrations/react';
 const mockUseUndoRedo = useUndoRedo as jest.MockedFunction<typeof useUndoRedo>;
 
 describe('UndoRedoControls', () => {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let engine: any;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let mockUndoRedoState: any;
 
   beforeEach(() => {
@@ -246,29 +248,20 @@ describe('UndoRedoControls', () => {
     it('supports keyboard navigation', async () => {
       const user = userEvent.setup();
       render(<UndoRedoControls engine={engine} />);
-      
-      // Tab to first button
-      await user.tab();
+      await act(async () => { await user.tab(); });
       expect(screen.getByRole('button', { name: /undo/i })).toHaveFocus();
-      
-      // Tab to second button
-      await user.tab();
+      await act(async () => { await user.tab(); });
       expect(screen.getByRole('button', { name: /redo/i })).toHaveFocus();
     });
 
     it('activates buttons with Enter and Space keys', async () => {
       const user = userEvent.setup();
       render(<UndoRedoControls engine={engine} />);
-      
       const undoButton = screen.getByRole('button', { name: /undo/i });
-      undoButton.focus();
-      
-      // Test Enter key
-      await user.keyboard('{Enter}');
+      await act(async () => { undoButton.focus(); });
+      await act(async () => { await user.keyboard('{Enter}'); });
       expect(mockUndoRedoState.undo).toHaveBeenCalledTimes(1);
-      
-      // Test Space key
-      await user.keyboard(' ');
+      await act(async () => { await user.keyboard(' '); });
       expect(mockUndoRedoState.undo).toHaveBeenCalledTimes(2);
     });
   });
@@ -322,3 +315,4 @@ describe('UndoRedoControls', () => {
     });
   });
 });
+

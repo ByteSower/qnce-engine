@@ -37,15 +37,27 @@ import {
   PERSISTENCE_VERSION
 } from './types';
 import { StorageAdapter } from './types';
+import { createLogger, Logger } from '../utils/logger';
 
 // Conditional choice evaluator - Sprint 3.4
 import { 
   conditionEvaluator, 
-  ConditionEvaluator, 
   ConditionEvaluationError, 
   ConditionContext, 
   CustomEvaluatorFunction 
 } from './condition';
+import { ErrorFactory, serializeStructuredError } from './error-factory';
+import { globalDebugLogger } from '../utils/debug-logger';
+import { globalHotProfiler } from '../utils/hot-profiler';
+import { internShallowRecord, internString } from '../utils/intern';
+
+/** Engine hook context */
+/** @public */
+export interface EngineHookContext { engine: QNCEEngine; node: NarrativeNode; choice?: Choice }
+/** @public */
+export type PreChoiceHook = (ctx: EngineHookContext) => void | boolean; // return false -> cancel
+/** @public */
+export type PostChoiceHook = (ctx: EngineHookContext) => void;
 
 // Sprint 3.5: Autosave and Undo/Redo imports
 import {
@@ -53,12 +65,11 @@ import {
   AutosaveConfig,
   UndoRedoConfig,
   UndoRedoResult,
-  AutosaveResult,
-  HistoryManager,
-  AutosaveEvent,
-  UndoRedoEvent
+  AutosaveResult
 } from './types';
 
+/** Narrative choice presented to user */
+/** @public */
 export interface Choice {
   text: string;
   nextNodeId: string;
@@ -79,6 +90,8 @@ export interface Choice {
   condition?: string; // Expression string for choice visibility (e.g., "flags.curiosity >= 3 && !flags.seenEnding")
 }
 
+/** Story node containing narrative text and available choices */
+/** @public */
 export interface NarrativeNode {
   id: string;
   text: string;
@@ -91,12 +104,16 @@ export interface NarrativeNode {
 
 export { QNCEStory };
 
+/** Serializable engine state snapshot */
+/** @public */
 export interface QNCEState {
   currentNodeId: string;
   flags: Record<string, unknown>;
   history: string[];
 }
 
+/** Flow event captured during narrative traversal */
+/** @public */
 export interface FlowEvent {
   id: string;
   fromNodeId: string;
@@ -105,6 +122,8 @@ export interface FlowEvent {
   metadata?: Record<string, unknown>;
 }
 
+/** Full story data input structure */
+/** @public */
 export interface StoryData {
   nodes: NarrativeNode[];
   initialNodeId: string;
@@ -130,16 +149,33 @@ export class QNCEEngine {
   private state: QNCEState;
   public storyData: StoryData; // Made public for hot-reload compatibility
   private activeFlowEvents: FlowEvent[] = [];
-  private performanceMode: boolean = false;
-  private enableProfiling: boolean = false;
+  private performanceMode = false;
+  private enableProfiling = false;
+  private debugMode = false;
   private branchingEngine?: QNCEBranchingEngine;
   private choiceValidator: ChoiceValidator; // Sprint 3.2: Choice validation
   
   // Sprint 3.3: State persistence and checkpoints
   private checkpoints: Map<string, Checkpoint> = new Map();
-  private maxCheckpoints: number = 50;
-  private autoCheckpointEnabled: boolean = false;
+  private maxCheckpoints = 50;
+  private autoCheckpointEnabled = false;
 
+  // Flag pooling to reduce duplicate string allocations
+  private flagKeyPool: Map<string, string> = new Map();
+  private flagValuePool: Map<string, string> = new Map();
+  private internFlagKey(raw: string): string {
+    let pooled = this.flagKeyPool.get(raw);
+    if (!pooled) { this.flagKeyPool.set(raw, raw); pooled = raw; }
+    return pooled;
+  }
+  private internFlagValue(val: unknown): unknown {
+    if (typeof val === 'string' && val.length <= 64) { // limit to modest strings
+      let pooled = this.flagValuePool.get(val);
+      if (!pooled) { this.flagValuePool.set(val, val); pooled = val; }
+      return pooled;
+    }
+    return val;
+  }
   // Sprint 3.3: State persistence properties
   private checkpointManager?: CheckpointManager;
 
@@ -161,13 +197,28 @@ export class QNCEEngine {
     trackChoiceText: true,
     trackActions: ['choice', 'flag-change', 'state-load']
   };
-  private lastAutosaveTime: number = 0;
-  private isUndoRedoOperation: boolean = false;
+  private lastAutosaveTime = 0;
+  private isUndoRedoOperation = false;
   private storageAdapter?: StorageAdapter;
+  // Storage retry policy (initial simple implementation)
+  private storageRetryPolicy: { maxAttempts: number; baseDelayMs: number; factor: number; maxDelayMs: number; jitter: boolean } = {
+    maxAttempts: 3,
+    baseDelayMs: 5,
+    factor: 2,
+    maxDelayMs: 100,
+    jitter: true
+  };
 
   // Sprint 4.1: Telemetry support
   private telemetry?: import('../telemetry/types').Telemetry;
   private defaultTelemetryCtx?: import('../telemetry/types').QEvent['ctx'];
+  // Hooks
+  private preChoiceHooks: { h: PreChoiceHook; p: number; o: number }[] = [];
+  private postChoiceHooks: { h: PostChoiceHook; p: number; o: number }[] = [];
+  private hookCounter = 0;
+  private logger: Logger = createLogger({ level: 'warn' });
+  private engineOptions?: { telemetry?: import('../telemetry/types').Telemetry; env?: 'dev' | 'test' | 'prod'; appVersion?: string; sessionId?: string; logger?: Logger; suppressTelemetryWarnings?: boolean; };
+  private minimalTelemetry = false;
 
   public get flags(): Record<string, unknown> {
     return this.state.flags;
@@ -176,6 +227,9 @@ export class QNCEEngine {
   public get history(): string[] {
     return this.state.history;
   }
+
+  /** Access the engine logger (public read-only) */
+  public getLogger(): Logger { return this.logger; }
 
   public get isComplete(): boolean {
     try {
@@ -188,13 +242,17 @@ export class QNCEEngine {
   constructor(
     storyData: StoryData, 
     initialState?: Partial<QNCEState>, 
-    performanceMode: boolean = false,
+  performanceMode = false,
     threadPoolConfig?: Partial<ThreadPoolConfig>,
-    options?: { telemetry?: import('../telemetry/types').Telemetry; env?: 'dev' | 'test' | 'prod'; appVersion?: string; sessionId?: string; }
+  options?: { telemetry?: import('../telemetry/types').Telemetry; env?: 'dev' | 'test' | 'prod'; appVersion?: string; sessionId?: string; logger?: Logger; suppressTelemetryWarnings?: boolean; minimalTelemetry?: boolean }
   ) {
     this.storyData = storyData;
     this.performanceMode = performanceMode;
     this.enableProfiling = performanceMode; // Enable profiling with performance mode
+
+    if (this.performanceMode) {
+      try { conditionEvaluator.enablePooling(true); } catch {}
+    }
     
     // Initialize choice validator (Sprint 3.2)
     this.choiceValidator = createChoiceValidator();
@@ -211,7 +269,10 @@ export class QNCEEngine {
     };
 
     // Telemetry wiring
-    this.telemetry = options?.telemetry;
+  this.telemetry = options?.telemetry;
+  if (options?.logger) this.logger = options.logger;
+  this.engineOptions = options;
+    this.minimalTelemetry = options?.minimalTelemetry ?? false;
     if (this.telemetry) {
       const sessionId = options?.sessionId || `${Date.now().toString(36)}-${Math.random().toString(36).slice(2,8)}`;
       this.defaultTelemetryCtx = {
@@ -227,20 +288,70 @@ export class QNCEEngine {
     }
   }
 
+  /**
+   * Dispose engine resources (telemetry, performance reporter, background thread pool in perf mode)
+   * @public
+   */
+  public async dispose(): Promise<void> {
+    try { if (this.telemetry) await this.telemetry.dispose(); } catch {}
+    try { getPerfReporter().dispose?.(); } catch {}
+    if (this.performanceMode) {
+      try {
+        const { shutdownThreadPool } = await import('../performance/ThreadPool');
+        await shutdownThreadPool();
+      } catch {}
+    }
+  }
+
   // Lane B: StorageAdapter integration
   /** Attach a storage adapter for persistence */
   attachStorageAdapter(adapter: StorageAdapter): void {
     this.storageAdapter = adapter;
   }
 
+  /**
+   * Configure storage retry policy for transient save failures.
+   * @param policy - Partial policy overriding defaults. Set maxAttempts to 1 to disable retries.
+   * @beta
+   */
+  setStorageRetryPolicy(policy: Partial<{ maxAttempts: number; baseDelayMs: number; factor: number; maxDelayMs: number; jitter: boolean }>): void {
+    this.storageRetryPolicy = { ...this.storageRetryPolicy, ...policy };
+  }
+
+  private async sleep(ms: number) { return new Promise(r => setTimeout(r, ms)); }
+
+  private computeBackoff(attempt: number): number {
+    const { baseDelayMs, factor, maxDelayMs, jitter } = this.storageRetryPolicy;
+    const raw = Math.min(baseDelayMs * Math.pow(factor, attempt - 1), maxDelayMs);
+    if (!jitter) return raw;
+    const spread = raw * 0.5;
+    return Math.max(0, raw - spread + Math.random() * spread);
+  }
+
   /** Save current state through the attached storage adapter */
   async saveToStorage(key: string, options: SerializationOptions = {}): Promise<PersistenceResult> {
     if (!this.storageAdapter) return { success: false, error: 'No storage adapter attached' };
-  const t0 = Date.now();
-  const serialized = await this.saveState(options);
-  const res = await this.storageAdapter.save(key, serialized, options);
-  try { this.telemetry?.emit({ type: 'storage.op', payload: { op: 'save', key, ms: Date.now() - t0, ok: !!res?.success }, ts: Date.now(), ctx: this.defaultTelemetryCtx! }); } catch {}
-  return res;
+    const t0 = Date.now();
+    const serialized = await this.saveState(options);
+    const policy = this.storageRetryPolicy;
+    let attempt = 0;
+    let lastResult: PersistenceResult | undefined;
+    while (true) {
+      attempt++;
+      try {
+        lastResult = await this.storageAdapter.save(key, serialized, options);
+      } catch (err) {
+        lastResult = { success: false, error: (err as Error)?.message || 'unknown-error' };
+      }
+      if (lastResult.success || attempt >= policy.maxAttempts || policy.maxAttempts <= 1) break;
+      // Only retry if explicitly failed (success === false)
+      const delay = this.computeBackoff(attempt);
+      await this.sleep(delay);
+    }
+    try {
+      this.telemetry?.emit({ type: 'storage.op', payload: { op: 'save', key, ms: Date.now() - t0, ok: !!lastResult?.success, attempts: attempt, maxAttempts: policy.maxAttempts }, ts: Date.now(), ctx: this.defaultTelemetryCtx! });
+    } catch {}
+    return lastResult || { success: false, error: 'unknown' };
   }
 
   /** Load state from the attached storage adapter */
@@ -298,7 +409,7 @@ export class QNCEEngine {
   /**
    * Navigate directly to a specific node by ID
    * @param nodeId - The ID of the node to navigate to
-   * @throws {QNCENavigationError} When nodeId is invalid or not found
+  * @throws \{QNCENavigationError\} When nodeId is invalid or not found
    */
   goToNodeById(nodeId: string): void {
     // Validate node exists
@@ -367,7 +478,7 @@ export class QNCEEngine {
     }
     
   const node = findNode(this.storyData.nodes, this.state.currentNodeId);
-  try { this.telemetry?.emit({ type: 'node.enter', payload: { nodeId: node.id }, ts: Date.now(), ctx: this.defaultTelemetryCtx! }); } catch {}
+  try { this.telemetry?.emit({ type: 'node.enter', payload: this.minimalTelemetry ? node.id : { nodeId: node.id }, ts: Date.now(), ctx: this.defaultTelemetryCtx! }); } catch {}
   return node;
   }
 
@@ -383,6 +494,23 @@ export class QNCEEngine {
       customData: {}
     };
 
+    // Performance-mode choice array pooling: reuse a scratch array to avoid per-call allocations
+    let scratch: Choice[] | undefined;
+    if (this.performanceMode) {
+      // Lazily allocate a shared scratch array on first use and clear in-place
+      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+      // @ts-ignore - attach hidden field for pooling (internal only)
+      if (!this.__choiceScratch) { /* eslint-disable-line */
+        // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+        // @ts-ignore
+        this.__choiceScratch = [] as Choice[]; /* eslint-disable-line */
+      }
+      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+      // @ts-ignore
+      scratch = this.__choiceScratch as Choice[]; /* eslint-disable-line */
+      scratch.length = 0;
+    }
+
     // First apply conditional filtering (Sprint 3.4)
     const conditionallyAvailable = currentNode.choices.filter((choice) => {
       // If no condition is specified, choice is always available
@@ -393,20 +521,38 @@ export class QNCEEngine {
       try {
         // Evaluate the condition using the condition evaluator
         const t0 = Date.now();
-        const res = conditionEvaluator.evaluate(choice.condition, context);
-        try { this.telemetry?.emit({ type: 'expression.evaluate', payload: { ok: true, ms: Date.now() - t0 }, ts: Date.now(), ctx: this.defaultTelemetryCtx! }); } catch {}
+    const res = globalHotProfiler.wrap('condition.evaluate', () => conditionEvaluator.evaluate(choice.condition!, context));
+  try { this.telemetry?.emit({ type: 'expression.evaluate', payload: this.minimalTelemetry ? 1 : { ok: true, ms: Date.now() - t0 }, ts: Date.now(), ctx: this.defaultTelemetryCtx! }); } catch {}
+    if (this.debugMode) globalDebugLogger.log('condition.ok', { nodeId: this.state.currentNodeId, choiceText: choice.text, expr: choice.condition });
         return res;
       } catch (error) {
         // Log condition evaluation errors but don't block other choices
         if (error instanceof ConditionEvaluationError) {
-          console.warn(`[QNCE] Choice condition evaluation failed: ${error.message}`, {
+          const struct = ErrorFactory.condition('Choice condition evaluation failed', {
             choiceText: choice.text,
-            condition: choice.condition,
-            nodeId: this.state.currentNodeId
+            conditionExpression: choice.condition,
+            nodeId: this.state.currentNodeId,
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            storyId: (this.storyData as any)?.id,
+            cause: error
           });
-          try { this.telemetry?.emit({ type: 'expression.evaluate', payload: { ok: false, error: 'ConditionEvaluationError' }, ts: Date.now(), ctx: this.defaultTelemetryCtx! }); } catch {}
+          // eslint-disable-next-line no-console
+          this.logger.warn('[QNCE] ' + serializeStructuredError(struct));
+          try { this.telemetry?.emit({ type: 'engine.structuredError', payload: serializeStructuredError(struct), ts: Date.now(), ctx: this.defaultTelemetryCtx! }); } catch {}
+          try { this.telemetry?.emit({ type: 'expression.evaluate', payload: this.minimalTelemetry ? 0 : { ok: false, error: 'ConditionEvaluationError' }, ts: Date.now(), ctx: this.defaultTelemetryCtx! }); } catch {}
         } else {
-          console.warn(`[QNCE] Unexpected error evaluating choice condition:`, error);
+          const struct = ErrorFactory.condition('Unexpected error evaluating choice condition', {
+            choiceText: choice.text,
+            conditionExpression: choice.condition,
+            nodeId: this.state.currentNodeId,
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            storyId: (this.storyData as any)?.id,
+            cause: error
+          });
+          // eslint-disable-next-line no-console
+          this.logger.warn('[QNCE] ' + serializeStructuredError(struct));
+          try { this.telemetry?.emit({ type: 'engine.structuredError', payload: serializeStructuredError(struct), ts: Date.now(), ctx: this.defaultTelemetryCtx! }); } catch {}
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           try { this.telemetry?.emit({ type: 'engine.error', payload: { where: 'getAvailableChoices', error: (error as any)?.message || String(error) }, ts: Date.now(), ctx: this.defaultTelemetryCtx! }); } catch {}
         }
         
@@ -421,8 +567,14 @@ export class QNCEEngine {
       this.state,
       conditionallyAvailable  // Pass the conditionally filtered choices
     );
-    
-    return this.choiceValidator.getAvailableChoices(validationContext);
+
+    const validated = this.choiceValidator.getAvailableChoices(validationContext);
+    if (!this.performanceMode || !scratch) return validated;
+
+    // Copy into scratch to present a stable pooled array (avoid leaking validator's array if it allocates)
+    for (let i = 0; i < validated.length; i++) scratch[i] = validated[i];
+    scratch.length = validated.length;
+    return scratch;
   }
 
   makeChoice(choiceIndex: number): void {
@@ -459,10 +611,12 @@ export class QNCEEngine {
   }
 
   setFlag(key: string, value: unknown): void {
+  if (this.debugMode) globalDebugLogger.log('flag.set', { key, value });
     // Sprint 3.5: Save state for undo before making changes
     const preChangeState = this.deepCopy(this.state);
-    
-    this.state.flags[key] = value;
+  const pooledKey = this.internFlagKey(key);
+  const pooledValue = this.internFlagValue(value);
+  this.state.flags[pooledKey] = pooledValue;
     
     // Sprint 3.5: Track state change for undo/redo
     if (this.undoRedoConfig.enabled && !this.isUndoRedoOperation && 
@@ -479,7 +633,17 @@ export class QNCEEngine {
         flagKey: key,
         flagValue: value
       }).catch((error: Error) => {
-        console.warn('[QNCE] Autosave failed:', error.message);
+        const struct = ErrorFactory.persistence('Autosave failed', {
+          operation: 'autosave',
+          flagKey: key,
+          flagValue: value,
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          storyId: (this.storyData as any)?.id,
+          cause: error
+        });
+  // eslint-disable-next-line no-console
+  this.logger.warn('[QNCE] ' + serializeStructuredError(struct));
+  try { this.telemetry?.emit({ type: 'engine.structuredError', payload: serializeStructuredError(struct), ts: Date.now(), ctx: this.defaultTelemetryCtx! }); } catch {}
       });
     }
   }
@@ -489,6 +653,29 @@ export class QNCEEngine {
   }
 
   selectChoice(choice: Choice): void {
+  if (this.debugMode) globalDebugLogger.log('choice.select.start', { from: this.state.currentNodeId, to: choice.nextNodeId, choiceText: choice.text });
+    // Pre-choice hooks (ordered by priority desc then registration order)
+    if (this.preChoiceHooks.length) {
+      const currentNodeForHooks = this.getCurrentNode();
+      for (const hook of this.preChoiceHooks) {
+        try {
+          const res = hook.h({ engine: this, node: currentNodeForHooks, choice });
+          if (res === false) return; // cancellation
+        } catch (e) {
+          const struct = ErrorFactory.hook('pre-choice hook error', {
+            hookStage: 'pre-choice',
+            nodeId: currentNodeForHooks.id,
+            choiceText: choice.text,
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            storyId: (this.storyData as any)?.id,
+            cause: e
+          });
+          // eslint-disable-next-line no-console
+          this.logger.warn('[QNCE] ' + serializeStructuredError(struct));
+          try { this.telemetry?.emit({ type: 'engine.structuredError', payload: serializeStructuredError(struct), ts: Date.now(), ctx: this.defaultTelemetryCtx! }); } catch {}
+        }
+      }
+    }
     // Sprint 3.5: Save state for undo before making changes
     const preChangeState = this.deepCopy(this.state);
     
@@ -558,9 +745,40 @@ export class QNCEEngine {
         toNodeId,
         choiceText: choice.text
       }).catch(error => {
-        console.warn('[QNCE] Autosave failed:', error.message);
+        const struct = ErrorFactory.persistence('Autosave failed', {
+          operation: 'autosave',
+          fromNodeId,
+          toNodeId,
+          choiceText: choice.text,
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          storyId: (this.storyData as any)?.id,
+          cause: error
+        });
+  // eslint-disable-next-line no-console
+  this.logger.warn('[QNCE] ' + serializeStructuredError(struct));
+  try { this.telemetry?.emit({ type: 'engine.structuredError', payload: serializeStructuredError(struct), ts: Date.now(), ctx: this.defaultTelemetryCtx! }); } catch {}
       });
     }
+    // Post-choice hooks
+    if (this.postChoiceHooks.length) {
+      const nodeAfter = this.getCurrentNode();
+      for (const hook of this.postChoiceHooks) {
+        try { hook.h({ engine: this, node: nodeAfter, choice }); } catch (e) {
+          const struct = ErrorFactory.hook('post-choice hook error', {
+            hookStage: 'post-choice',
+            nodeId: nodeAfter.id,
+            choiceText: choice.text,
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            storyId: (this.storyData as any)?.id,
+            cause: e
+          });
+          // eslint-disable-next-line no-console
+          this.logger.warn('[QNCE] ' + serializeStructuredError(struct));
+          try { this.telemetry?.emit({ type: 'engine.structuredError', payload: serializeStructuredError(struct), ts: Date.now(), ctx: this.defaultTelemetryCtx! }); } catch {}
+        }
+      }
+    }
+  if (this.debugMode) globalDebugLogger.log('choice.select.end', { to: this.state.currentNodeId });
     
     // Complete state transition span
     if (transitionSpanId) {
@@ -574,7 +792,16 @@ export class QNCEEngine {
     if (this.performanceMode) {
       // Preload next possible nodes in background
       this.preloadNextNodes().catch(error => {
-        console.warn('[QNCE] Background preload failed:', error.message);
+        const struct = ErrorFactory.state('Background preload failed', {
+          operation: 'preloadNextNodes',
+          nodeId: toNodeId,
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          storyId: (this.storyData as any)?.id,
+          cause: error
+        });
+  // eslint-disable-next-line no-console
+  this.logger.warn('[QNCE] ' + serializeStructuredError(struct));
+  try { this.telemetry?.emit({ type: 'engine.structuredError', payload: serializeStructuredError(struct), ts: Date.now(), ctx: this.defaultTelemetryCtx! }); } catch {}
       });
       
       // Write telemetry data in background  
@@ -584,10 +811,50 @@ export class QNCEEngine {
         toNodeId,
         choiceText: choice.text.slice(0, 50) // First 50 chars for privacy
       }).catch(error => {
-        console.warn('[QNCE] Background telemetry failed:', error.message);
+        const struct = ErrorFactory.telemetry('Background telemetry failed', {
+          operation: 'backgroundTelemetryWrite',
+          fromNodeId,
+          toNodeId,
+          choiceText: choice.text,
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          storyId: (this.storyData as any)?.id,
+          cause: error
+        });
+        // eslint-disable-next-line no-console
+  this.logger.warn('[QNCE] ' + serializeStructuredError(struct));
       });
     }
   }
+
+  /** Register a hook */
+  registerHook(type: 'pre-choice', handler: PreChoiceHook, priority?: number): () => void;
+  registerHook(type: 'post-choice', handler: PostChoiceHook, priority?: number): () => void;
+  // eslint-disable-next-line @typescript-eslint/no-inferrable-types
+  registerHook(type: 'pre-choice' | 'post-choice', handler: PreChoiceHook | PostChoiceHook, priority: number = 0): () => void {
+    const list = type === 'pre-choice' ? this.preChoiceHooks : this.postChoiceHooks;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const entry = { h: handler as any, p: priority, o: this.hookCounter++ };
+    list.push(entry);
+    list.sort((a, b) => (b.p - a.p) || (a.o - b.o));
+    return () => {
+      const idx = list.indexOf(entry);
+      if (idx >= 0) list.splice(idx, 1);
+    };
+  }
+
+  /** Clear all hooks (testing / reset) */
+  clearHooks() { this.preChoiceHooks = []; this.postChoiceHooks = []; }
+
+  /** Enable verbose debug logging (stored in ring buffer) */
+  enableDebug() { this.debugMode = true; globalDebugLogger.setEnabled(true); }
+  disableDebug() { this.debugMode = false; if (!this.enableProfiling) globalDebugLogger.setEnabled(false); }
+  getDebugLogs() { return globalDebugLogger.flush(); }
+  clearDebugLogs() { globalDebugLogger.clear(); }
+  /** Enable aggregated hot path profiling */
+  enableHotProfiling() { globalHotProfiler.enable(true); }
+  disableHotProfiling() { globalHotProfiler.enable(false); }
+  getHotProfileSummary() { return globalHotProfiler.summary(); }
+  resetHotProfile() { globalHotProfiler.reset(); }
 
   /** Flush telemetry (useful before process exit) */
   async flushTelemetry(): Promise<void> { try { await this.telemetry?.flush(); } catch {} }
@@ -637,7 +904,8 @@ export class QNCEEngine {
       this.triggerAutosave('state-load', {
         nodeId: state.currentNodeId
       }).catch((error: Error) => {
-        console.warn('[QNCE] Autosave failed:', error.message);
+  // eslint-disable-next-line no-console
+  this.logger.warn('[QNCE] Autosave failed: ' + error.message);
       });
     }
   }
@@ -705,7 +973,8 @@ export class QNCEEngine {
       // Generate checksum if requested
       if (options.generateChecksum) {
         const stateToHash = { ...serializedState };
-        delete (stateToHash.metadata as any).checksum; // Exclude checksum from hash
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  delete (stateToHash.metadata as any).checksum; // Exclude checksum from hash
         const stateString = JSON.stringify(stateToHash);
         metadata.checksum = await this.generateChecksum(stateString);
         serializedState.metadata = metadata;
@@ -1018,7 +1287,11 @@ export class QNCEEngine {
    */
   private createFlowEvent(fromNodeId: string, toNodeId: string, metadata?: Record<string, unknown>): PooledFlow {
     const flow = poolManager.borrowFlow();
-    flow.initialize(fromNodeId, metadata);
+  // In minimal telemetry mode, avoid attaching heavy metadata
+  const meta = this.minimalTelemetry ? undefined : internShallowRecord(metadata || {});
+  // Intern node id to reduce duplicate string allocations across events
+  const fromId = internString(fromNodeId);
+  flow.initialize(fromId, meta);
     flow.addTransition(fromNodeId, toNodeId);
     return flow;
   }
@@ -1027,18 +1300,21 @@ export class QNCEEngine {
    * Record and manage flow events
    */
   private recordFlowEvent(flow: PooledFlow): void {
+    const toId = flow.transitions[flow.transitions.length - 1]?.split('->')[1] || '';
     const flowEvent: FlowEvent = {
       id: `${flow.nodeId}-${Date.now()}`,
       fromNodeId: flow.nodeId,
-      toNodeId: flow.transitions[flow.transitions.length - 1]?.split('->')[1] || '',
+      toNodeId: internString(toId),
       timestamp: flow.timestamp,
-      metadata: flow.metadata
+      // In minimal mode, drop metadata entirely
+      metadata: this.minimalTelemetry ? undefined : flow.metadata
     };
     
     this.activeFlowEvents.push(flowEvent);
     
     // Clean up old flow events (basic LRU-style cleanup)
-    if (this.activeFlowEvents.length > 10) {
+    const cap = this.minimalTelemetry ? 5 : 10;
+    if (this.activeFlowEvents.length > cap) {
       this.activeFlowEvents.shift(); // Remove oldest
     }
   }
@@ -1110,7 +1386,8 @@ export class QNCEEngine {
     };
     
     threadPool.submitJob('telemetry-write', telemetryData, 'low').catch(error => {
-      console.warn('[QNCE] Telemetry write failed:', error.message);
+  if (this.engineOptions?.suppressTelemetryWarnings && error?.message === 'Job queue limit exceeded') return;
+      this.logger.warn('[QNCE] Telemetry write failed: ' + error.message);
     });
   }
 
@@ -1124,7 +1401,8 @@ export class QNCEEngine {
    */
   enableBranching(story: QNCEStory): QNCEBranchingEngine {
     if (this.branchingEngine) {
-      console.warn('[QNCE] Branching already enabled for this engine instance');
+  // eslint-disable-next-line no-console
+  this.logger.warn('[QNCE] Branching already enabled for this engine instance');
       return this.branchingEngine;
     }
 
@@ -1309,7 +1587,8 @@ export class QNCEEngine {
     if (!receivedChecksum) return false;
 
     const stateToHash = { ...serializedState };
-    delete (stateToHash.metadata as any).checksum;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  delete (stateToHash.metadata as any).checksum;
 
     const stateString = JSON.stringify(stateToHash);
     const expectedChecksum = await this.generateChecksum(stateString);
@@ -1539,13 +1818,19 @@ export class QNCEEngine {
    */
   private pushToUndoStack(state: QNCEState, action?: string, metadata?: Record<string, unknown>): void {
     const startTime = performance.now();
-    
+    // Memory optimization (lightweight history): we store a shallow snapshot of flags + currentNodeId
+    // instead of deep copying full engine state. We embed it in metadata under a reserved key and keep
+    // a minimal placeholder state reference to satisfy existing types.
+    const LIGHT_STATE_KEY = '__lightState';
+  const prevHist = (state as unknown as { history?: string[] })?.history;
+  const lightState = { currentNodeId: state.currentNodeId, flags: { ...state.flags }, history: [...(Array.isArray(prevHist) ? prevHist : this.state.history)] };
     const entry: HistoryEntry = {
       id: this.generateHistoryId(),
-      state: this.deepCopy(state),
+      // Keep original deep copy for compatibility OFF for now -> minimal placeholder with current fields.
+  state: this.deepCopy({ currentNodeId: state.currentNodeId, flags: { ...state.flags }, history: [...(Array.isArray(prevHist) ? prevHist : this.state.history)] }) as QNCEState,
       timestamp: new Date().toISOString(),
       action,
-      metadata
+      metadata: { ...(metadata || {}), [LIGHT_STATE_KEY]: lightState }
     };
 
     this.undoStack.push(entry);
@@ -1592,9 +1877,10 @@ export class QNCEEngine {
       // Save current state to redo stack
       const currentEntry: HistoryEntry = {
         id: this.generateHistoryId(),
-        state: this.deepCopy(this.state),
+  state: this.deepCopy({ currentNodeId: this.state.currentNodeId, flags: { ...this.state.flags }, history: [...this.state.history] }) as QNCEState,
         timestamp: new Date().toISOString(),
-        action: 'redo-point'
+        action: 'redo-point',
+  metadata: { __lightState: { currentNodeId: this.state.currentNodeId, flags: { ...this.state.flags }, history: [...this.state.history] } }
       };
       
       this.redoStack.push(currentEntry);
@@ -1609,7 +1895,15 @@ export class QNCEEngine {
       
       // Set flag to prevent triggering undo/redo tracking during restore
       this.isUndoRedoOperation = true;
-      this.state = this.deepCopy(entryToRestore.state);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- metadata may carry lightweight snapshot
+  const light = (entryToRestore.metadata as any)?.__lightState;
+      if (light) {
+        this.state.currentNodeId = light.currentNodeId;
+        this.state.flags = { ...light.flags };
+        if (Array.isArray(light.history)) this.state.history = [...light.history];
+      } else {
+        this.state = this.deepCopy(entryToRestore.state);
+      }
       this.isUndoRedoOperation = false;
 
       const duration = performance.now() - startTime;
@@ -1676,9 +1970,10 @@ export class QNCEEngine {
       // Save current state to undo stack
       const currentEntry: HistoryEntry = {
         id: this.generateHistoryId(),
-        state: this.deepCopy(this.state),
+  state: this.deepCopy({ currentNodeId: this.state.currentNodeId, flags: { ...this.state.flags }, history: [...this.state.history] }) as QNCEState,
         timestamp: new Date().toISOString(),
-        action: 'undo-point'
+        action: 'undo-point',
+  metadata: { __lightState: { currentNodeId: this.state.currentNodeId, flags: { ...this.state.flags }, history: [...this.state.history] } }
       };
       
       this.undoStack.push(currentEntry);
@@ -1693,7 +1988,15 @@ export class QNCEEngine {
       
       // Set flag to prevent triggering undo/redo tracking during restore
       this.isUndoRedoOperation = true;
-      this.state = this.deepCopy(entryToRestore.state);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- metadata may carry lightweight snapshot
+  const light = (entryToRestore.metadata as any)?.__lightState;
+      if (light) {
+        this.state.currentNodeId = light.currentNodeId;
+        this.state.flags = { ...light.flags };
+        if (Array.isArray(light.history)) this.state.history = [...light.history];
+      } else {
+        this.state = this.deepCopy(entryToRestore.state);
+      }
       this.isUndoRedoOperation = false;
 
       const duration = performance.now() - startTime;
@@ -1812,6 +2115,8 @@ export class QNCEEngine {
    * @param metadata - Optional metadata about the trigger
    * @returns Promise resolving to autosave result
    */
+  // metadata currently unused (reserved for future extended autosave telemetry)
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   private async triggerAutosave(trigger: string, metadata?: Record<string, unknown>): Promise<AutosaveResult> {
     const startTime = performance.now();
     
@@ -1945,9 +2250,9 @@ export class QNCEEngine {
 export function createQNCEEngine(
   storyData: StoryData, 
   initialState?: Partial<QNCEState>, 
-  performanceMode: boolean = false,
+  performanceMode = false,
   threadPoolConfig?: Partial<ThreadPoolConfig>,
-  options?: { telemetry?: import('../telemetry/types').Telemetry; env?: 'dev' | 'test' | 'prod'; appVersion?: string; sessionId?: string; }
+  options?: { telemetry?: import('../telemetry/types').Telemetry; env?: 'dev' | 'test' | 'prod'; appVersion?: string; sessionId?: string; suppressTelemetryWarnings?: boolean; logger?: Logger; minimalTelemetry?: boolean }
 ): QNCEEngine {
   return new QNCEEngine(storyData, initialState, performanceMode, threadPoolConfig, options);
 }

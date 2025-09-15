@@ -1,5 +1,5 @@
 import React from 'react';
-import { render } from '@testing-library/react';
+import { render, act } from '@testing-library/react';
 import { screen, waitFor } from '@testing-library/dom';
 import { AutosaveIndicator } from '../components/AutosaveIndicator';
 import { createQNCEEngine } from '../../engine/core';
@@ -16,8 +16,15 @@ import { useAutosave } from '../../integrations/react';
 const mockUseAutosave = useAutosave as jest.MockedFunction<typeof useAutosave>;
 
 describe('AutosaveIndicator', () => {
-  let engine: any;
-  let mockAutosaveState: any;
+  let engine: ReturnType<typeof createQNCEEngine>;
+  let mockAutosaveState: {
+    autosave: jest.Mock;
+    configure: jest.Mock;
+    isEnabled: boolean;
+    isSaving: boolean;
+    lastAutosave: Date | null;
+    status?: string;
+  };
 
   beforeEach(() => {
     engine = createQNCEEngine(DEMO_STORY);
@@ -95,7 +102,7 @@ describe('AutosaveIndicator', () => {
       });
 
       // For now, skip this test as the component needs error state implementation
-      const { container } = render(<AutosaveIndicator engine={engine} variant="detailed" />);
+  render(<AutosaveIndicator engine={engine} variant="detailed" />);
       
       // We expect to see the saved status since error state is not implemented yet
       expect(screen.getByText('Saved')).toBeInTheDocument();
@@ -162,13 +169,13 @@ describe('AutosaveIndicator', () => {
         isSaving: false
       });
       
-      render(<AutosaveIndicator engine={engine} autoHideDelay={1000} />);
+  act(() => { render(<AutosaveIndicator engine={engine} autoHideDelay={1000} />); });
       
       const indicator = screen.getByRole('status');
       expect(indicator).toBeVisible();
       
       // Fast-forward time
-      jest.advanceTimersByTime(1500);
+  act(() => { jest.advanceTimersByTime(1500); });
       
       await waitFor(() => {
         expect(indicator).not.toBeVisible();
@@ -188,13 +195,13 @@ describe('AutosaveIndicator', () => {
         isSaving: false
       });
       
-      render(<AutosaveIndicator engine={engine} autoHideDelay={0} />);
+  act(() => { render(<AutosaveIndicator engine={engine} autoHideDelay={0} />); });
       
       const indicator = screen.getByRole('status');
       expect(indicator).toBeVisible();
 
       // Fast-forward time - should not hide when autoHideDelay is 0
-      jest.advanceTimersByTime(5000);
+  act(() => { jest.advanceTimersByTime(5000); });
       expect(indicator).toBeVisible();
       
       jest.useRealTimers();
@@ -203,9 +210,7 @@ describe('AutosaveIndicator', () => {
     it('resets hide timer when status changes', async () => {
       jest.useFakeTimers();
       
-      const { rerender } = render(
-        <AutosaveIndicator engine={engine} autoHideDelay={1000} />
-      );
+  const { rerender } = render(<AutosaveIndicator engine={engine} autoHideDelay={1000} />);
       
       // Advance halfway through hide delay
       jest.advanceTimersByTime(500);
@@ -213,14 +218,13 @@ describe('AutosaveIndicator', () => {
       // Change status (trigger state change)
       mockUseAutosave.mockReturnValue({
         ...mockAutosaveState,
-        isSaving: true,
-        status: 'saving'
+        isSaving: true
       });
       
-      rerender(<AutosaveIndicator engine={engine} autoHideDelay={1000} />);
+  act(() => { rerender(<AutosaveIndicator engine={engine} autoHideDelay={1000} />); });
       
       // Advance past original hide time
-      jest.advanceTimersByTime(600);
+  act(() => { jest.advanceTimersByTime(600); });
       
       const indicator = screen.getByRole('status');
       expect(indicator).toBeVisible();
@@ -236,8 +240,7 @@ describe('AutosaveIndicator', () => {
       // Change status to trigger animation
       mockUseAutosave.mockReturnValue({
         ...mockAutosaveState,
-        isSaving: true,
-        status: 'saving'
+        isSaving: true
       });
       
       rerender(<AutosaveIndicator engine={engine} />);
@@ -249,8 +252,7 @@ describe('AutosaveIndicator', () => {
     it('shows pulsing animation during saving', () => {
       mockUseAutosave.mockReturnValue({
         ...mockAutosaveState,
-        isSaving: true,
-        status: 'saving'
+        isSaving: true
       });
 
       render(<AutosaveIndicator engine={engine} />);
@@ -392,7 +394,7 @@ describe('AutosaveIndicator', () => {
     it('handles null engine gracefully', () => {
       // This should not crash
       expect(() => {
-        render(<AutosaveIndicator engine={null as any} />);
+        render(<AutosaveIndicator engine={null as unknown as ReturnType<typeof createQNCEEngine>} />);
       }).not.toThrow();
     });
 

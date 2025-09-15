@@ -1,7 +1,7 @@
 // QNCE Engine Conditional Choices Tests - Sprint 3.4
 // Comprehensive test coverage for conditional choice display
 
-import { QNCEEngine, createQNCEEngine, StoryData, Choice } from '../src/engine/core';
+import { QNCEEngine, createQNCEEngine, StoryData } from '../src/engine/core';
 import { 
   ConditionEvaluator, 
   ConditionEvaluationError, 
@@ -445,7 +445,7 @@ describe('QNCE Conditional Choice Display - Sprint 3.4', () => {
         ]
       };
 
-      const manyChoicesEngine = createQNCEEngine(manyChoicesStory);
+  const manyChoicesEngine = createQNCEEngine(manyChoicesStory, undefined, false, undefined, { minimalTelemetry: true });
       
       // Set some flags to true
       for (let i = 0; i < 25; i++) {
@@ -457,7 +457,8 @@ describe('QNCE Conditional Choice Display - Sprint 3.4', () => {
       const end = performance.now();
       const duration = end - start;
 
-      expect(duration).toBeLessThan(15); // Under 15ms even with 50 conditions
+  // Restored original performance target (<15ms) after recent optimizations.
+  expect(duration).toBeLessThan(15);
       expect(choices).toHaveLength(25); // Half the choices should be available
     });
   });

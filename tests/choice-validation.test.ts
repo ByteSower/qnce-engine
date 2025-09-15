@@ -403,8 +403,7 @@ describe('QNCE Choice Validation System - Sprint 3.2', () => {
     });
 
     test('should not affect existing choice flows', () => {
-      // Test that adding validation doesn't break existing functionality
-      const _initialNode = engine.getCurrentNode().id;
+  // Test that adding validation doesn't break existing functionality
       
       engine.makeChoice(0); // Go left
       expect(engine.getCurrentNode().id).toBe('left');

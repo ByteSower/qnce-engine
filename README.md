@@ -11,6 +11,17 @@
 
 > New: Lightweight, privacy-safe telemetry (opt-in). CLI now supports `--telemetry` and `--telemetry-report`, with p50/p95 batch send latency. See the wiki: [Analytics & Telemetry](https://github.com/ByteSower/qnce-engine/blob/main/wiki/Analytics-and-Telemetry.md).
 
+## Documentation & Guides
+
+- Getting Started (wiki)
+- Analytics & Telemetry (wiki)
+- Branching Guide (wiki)
+- Performance Tuning (wiki)
+- Error Handling & Debug (docs/ERROR-HANDLING-AND-DEBUG.md)
+- Adapter Lifecycle (docs/ADAPTER-LIFECYCLE.md)
+- Deprecation Policy (docs/DEPRECATION-POLICY.md)
+
+
 ## Core Concepts
 
 - **Superposition:** Multiple narrative outcomes exist simultaneously until a choice is made
@@ -62,6 +73,7 @@ Early quantum helpers are available behind feature flags. They are off by defaul
 - **Background processing** for non-blocking operations
 - **Hot-reload capabilities** with <3.5ms story updates
 - **Comprehensive monitoring** with built-in CLI tools
+ - **Adaptive perf pipeline (beta)** with dynamic batch sizing & backoff
 
 #### Basic Flag-Based Conditions
 
@@ -236,6 +248,7 @@ engine.clearConditionEvaluator();
 - **🔥 Hot-Reload:** <3.5ms live story updates with delta patching
 - **📊 Real-time Profiling:** Comprehensive event instrumentation and analysis
 - **🖥️ Live Monitoring:** `qnce-perf` CLI dashboard with performance alerts
+ - **🧠 Adaptive Flush (Beta):** Dynamic telemetry/perf batch sizing + rejection backoff for smoother throughput
 
 ### Performance Dashboard
 ```bash
@@ -250,6 +263,60 @@ qnce-perf export > performance-report.json
 ```
 
 **[📚 Complete Performance Guide →](docs/PERFORMANCE.md)**
+
+### Adaptive Performance (Beta)
+
+The PerfReporter now implements adaptive heuristics to optimize background flush behavior.
+
+Key components:
+
+1. Exponential Backoff (R2)
+  - Triggered after consecutive flush dispatch rejections (e.g. thread pool queue full)
+  - Delay doubles each rejection (base 20ms, cap 500ms)
+  - Prevents tight retry loops and reduces queue pressure
+
+2. Dynamic Batch Sizing (R6)
+  - Starts from a configured base batch size
+  - Upscales when: backlog is large AND p95 send latency remains low (<25ms or <50ms tiers)
+    * Low latency + backlog > 2× base ⇒ scale toward up to ~3× base
+    * Low latency + backlog > 4× base ⇒ scale toward up to ~4× base (ceiling)
+  - Downscales aggressively when rejection streak ≥2 (divides batch by streak factor, never below 10)
+  - Exposed via `lastEffectiveBatchSize` in flush metrics snapshot
+
+3. Rejection Rate Metric
+  - `rejectionRate` (0–1) = rejectedFlushes / (accepted + rejected)
+  - Fast signal for sustained downstream pressure; enables dashboard or future auto-tuning hooks
+
+4. Debug Accessor
+  - `__getInternalPerfDebug()` includes: `consecutiveRejects`, `backoffDelayMs`, `nextAllowedFlushTime`, `lastEffectiveBatchSize`
+
+5. Environment Flag
+  - Set `QNCE_SUPPRESS_PERF_WARN=1` to silence repetitive flush failure warnings (e.g. in CI)
+  - Set `QNCE_DISABLE_ADAPTIVE_BATCH=1` to force fixed `batchSize` (disables dynamic scaling but keeps backoff)
+
+Status & Stability:
+- Marked `@beta` and subject to heuristic tuning (thresholds & scaling formula may evolve)
+- Safe to consume metrics (`rejectionRate`, `lastEffectiveBatchSize`, `adaptiveEnabled`) for observability, not yet for strict alert SLAs
+
+Example (inspection inside tests / diagnostics):
+```ts
+import { getPerfReporter } from 'qnce-engine/performance';
+
+const reporter = getPerfReporter();
+const snapshot = reporter.getFlushMetrics();
+console.log(snapshot.rejectionRate, snapshot.lastEffectiveBatchSize, snapshot.adaptiveEnabled);
+
+// Internal (beta) debug details
+// @ts-expect-error internal accessor
+console.log(reporter.__getInternalPerfDebug());
+
+// Force fixed batch sizing (example)
+// (Re-create reporter before use to apply config/env values)
+// const fixed = getPerfReporter({ batchSize: 100, disableAdaptiveBatch: true });
+// Snapshot field `adaptiveEnabled` will be false when dynamic sizing disabled.
+```
+
+If you experiment with tuning, please open an issue with: base batch size, average backlog, p95 latency trajectory, and observed rejectionRate.
 
 ## Installation
 
@@ -593,7 +660,7 @@ const engine = createQNCEEngine(storyData, {}, true, {
 // Monitor performance in real-time with CLI dashboard
 ```
 
-**📖 Complete Performance Guide:** [docs/PERFORMANCE_GUIDE.md](docs/PERFORMANCE_GUIDE.md)
+**📖 Complete Performance Guide:** [docs/PERFORMANCE.md](docs/PERFORMANCE.md)
 
 ## Core API
 

@@ -1,10 +1,15 @@
 // JSON Schema validation for QNCE StoryData using AJV
-import Ajv, { ErrorObject } from 'ajv';
+import Ajv, { ErrorObject, type AnySchema, type ValidateFunction } from 'ajv';
 import schema from './story-data.schema.json';
 import type { StoryData } from '../engine/core';
 
-const ajv = new Ajv({ allErrors: true } as any);
-const validateFn = ajv.compile(schema as any);
+const ajv = new Ajv({ allErrors: true });
+const _validateFn = ajv.compile(schema as unknown as AnySchema) as ValidateFunction<StoryData>;
+const validateFn = ((data: StoryData) => _validateFn(data) as boolean) as (data: StoryData) => boolean & { errors?: ErrorObject[] };
+// Attach errors getter compatibility
+Object.defineProperty(validateFn, 'errors', {
+  get: () => (_validateFn.errors as unknown as ErrorObject[] | undefined),
+});
 
 export interface SchemaValidation {
   valid: boolean;
@@ -12,6 +17,7 @@ export interface SchemaValidation {
 }
 
 export function validateStoryData(data: StoryData): SchemaValidation {
-  const valid = validateFn(data) as boolean;
-  return { valid, errors: valid ? undefined : (validateFn.errors || undefined) };
+  const valid: boolean = validateFn(data);
+  const errs = (validateFn as unknown as { errors?: ErrorObject[] }).errors;
+  return { valid, errors: valid ? undefined : (errs || undefined) };
 }

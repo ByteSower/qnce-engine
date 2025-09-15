@@ -2,6 +2,7 @@ import { QNCEEngine } from '../engine/core';
 
 /**
  * Theme configuration for QNCE UI components
+ * @public
  */
 export interface QNCETheme {
   colors: {
@@ -50,6 +51,7 @@ export interface QNCETheme {
 
 /**
  * Props for UndoRedoControls component
+ * @public
  */
 export interface UndoRedoControlsProps {
   /** QNCE Engine instance */
@@ -81,11 +83,13 @@ export interface UndoRedoControlsProps {
 
 /**
  * Autosave status
+ * @public
  */
 export type AutosaveStatus = 'idle' | 'saving' | 'saved' | 'error' | 'disabled';
 
 /**
  * Props for AutosaveIndicator component
+ * @public
  */
 export interface AutosaveIndicatorProps {
   /** QNCE Engine instance */
@@ -115,6 +119,7 @@ export interface AutosaveIndicatorProps {
 
 /**
  * Keyboard shortcuts configuration
+ * @public
  */
 export interface KeyboardShortcutsConfig {
   /** Enable/disable keyboard shortcuts */
@@ -134,6 +139,7 @@ export interface KeyboardShortcutsConfig {
 
 /**
  * Default theme for QNCE components
+ * @public
  */
 export const defaultTheme: QNCETheme = {
   colors: {

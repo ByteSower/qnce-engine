@@ -32,24 +32,34 @@ export {
 } from './engine/condition.js';
 
 // Sprint 4.1: Telemetry primitives (experimental)
-/** @experimental */
+/** @beta @experimental */
 export type { QEvent, Telemetry, TelemetryAdapter, TelemetryOptions } from './telemetry/types.js';
-/** @experimental */
+/** @beta @experimental */
 export { createTelemetry, createTelemetryAdapter, ConsoleAdapter, FileAdapter } from './telemetry/core.js';
 
 // Sprint 4.2: Quantum primitives (experimental)
-/** @experimental */
+/** @beta @experimental */
 export { Entangler } from './quantum/entangler.js';
-/** @experimental */
+/** @beta @experimental */
 export { Phase, type PhaseContext } from './quantum/phase.js';
-/** @experimental */
+/** @beta @experimental */
 export { FeatureFlags, type FeatureFlagsConfig } from './quantum/flags';
-/** @experimental */
+/** @beta @experimental */
 export { attachQuantumFeatures, type QuantumIntegration } from './quantum/integration';
-/** @experimental */
+/** @beta @experimental */
 export type {
   FeatureFlagKey,
   EntangleTransform,
   PhasePredicate,
   PhasePredicateContext
 } from './quantum/types';
+/** @beta @experimental */
+export { Measurement, type MeasurementContext, type Sampler } from './quantum/measurement';
+// Structured error factory
+/** @public */
+export { createStructuredError, ErrorFactory, serializeStructuredError, toStructuredError, type QNCEErrorKind, type QNCEErrorContext, type StructuredQNCEError, type HookStage } from './engine/error-factory.js';
+// Performance metrics (PerfReporter)
+/** @beta */
+export { getPerfReporter } from './performance/PerfReporter.js';
+/** @beta */
+export type { PerfFlushMetrics } from './performance/PerfReporter.js';

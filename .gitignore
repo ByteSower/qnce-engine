@@ -1,5 +1,8 @@
+temp/
+etc/qnce-engine.api.md
 # Local-only planning docs
 docs/ROADMAP-CHECKLIST.local.md
+docs/ROADMAP.md
 docs/API-INVENTORY.local.md
 # Logs
 logs

@@ -3,6 +3,8 @@
 **Version:** 1.2.0-sprint2  
 **Sprint #2:** Core Performance Refactor Complete  
 
+> Documentation Consolidation: This file now consolidates all performance content. The previous `PERFORMANCE_GUIDE.md` has been merged and will be removed to prevent drift. All future edits should target this canonical document.
+
 ## 🚀 Overview
 
 The QNCE engine now includes comprehensive performance optimization infrastructure delivering:
@@ -123,6 +125,18 @@ const spanId = perf.flowStart('my-flow', { context: 'gameplay' });
 // ... operations ...
 perf.flowComplete(spanId, 'target-node', { result: 'success' });
 ```
+
+### 5. Performance Events (Unified Reference)
+
+Events captured by the performance subsystem (names kept stable for dashboard & telemetry correlations):
+
+- `flow-start` / `flow-complete` – Narrative flow spans
+- `cache-hit` / `cache-miss` – Node retrieval / caching
+- `hot-reload-start` / `hot-reload-end` – Live story delta application
+- `state-transition` – Engine internal state changes
+- `custom` – User defined events via `perf.record()`
+
+These events funnel into the PerfReporter buffers and are aggregated for summary snapshots and flush heuristics (adaptive batching / backoff).
 
 ## 🖥️ CLI Performance Dashboard
 
@@ -350,6 +364,308 @@ if (summary.cacheHitRate < 0.8) {
 }
 ```
 
+### 6. Adaptive Flush & Dynamic Batch Sizing (R2/R6 - Beta)
+
+The performance pipeline includes adaptive heuristics for telemetry/perf flush operations.
+
+| Feature | Purpose | Heuristic (Initial) | Status |
+|---------|---------|---------------------|--------|
+| Exponential Backoff (R2) | Avoid tight retry loops after dispatch rejections | Base 20ms * 2^streak (cap 500ms) | Stable |
+| Dynamic Batch Sizing (R6) | Scale throughput under healthy latency; shrink under pressure | Upscale on backlog (>2×/4× base) with p95 <25ms / <50ms; shrink on streak ≥2 | Beta |
+| Rejection Rate | Health signal for downstream pressure | rejected / (accepted + rejected) | Beta |
+| Effective Batch Size Export | Observability of sizing decisions | `lastEffectiveBatchSize` | Beta |
+| Disable Adaptive Batch Flag | Force fixed batch size (diagnostics/baseline) | `disableAdaptiveBatch` config or env `QNCE_DISABLE_ADAPTIVE_BATCH=1` | Beta |
+| Adaptive Enabled Snapshot Flag | Observability: whether dynamic sizing active | `adaptiveEnabled` boolean in flush metrics snapshot | Beta |
+
+Metric Extensions:
+```ts
+interface PerfFlushMetrics {
+  rejectionRate: number;          // 0..1 ratio
+  lastEffectiveBatchSize: number; // adaptive batch size used
+  adaptiveEnabled: boolean;       // true when dynamic sizing heuristics active
+}
+```
+
+Simplified Sizing Logic:
+```ts
+if (consecutiveRejects >= 2) shrink();
+else if (backlog > base*4 && p95 < 50) upscale(≈4x cap);
+else if (backlog > base*2 && p95 < 25) upscale(≈3x cap);
+```
+
+Usage:
+```ts
+import { getPerfReporter } from 'qnce-engine/performance';
+const reporter = getPerfReporter();
+const m = reporter.getFlushMetrics();
+console.log(m.rejectionRate, m.lastEffectiveBatchSize);
+// Determine if adaptive sizing was active for this snapshot
+console.log('Adaptive active:', m.adaptiveEnabled);
+// Force fixed batch sizing for a deterministic baseline
+// const fixed = getPerfReporter({ batchSize: 100, disableAdaptiveBatch: true });
+// m.adaptiveEnabled will be false when forced fixed sizing is in effect.
+```
+
+Suppress warning noise in CI:
+```bash
+export QNCE_SUPPRESS_PERF_WARN=1
+```
+
+Internal debug (subject to change):
+```ts
+// @ts-expect-error internal
+console.log(reporter.__getInternalPerfDebug());
+```
+
+Beta Caveats:
+- Thresholds & scaling factors may evolve
+- Single-sample p95 (no smoothing yet)
+- Provide feedback with backlog, latency, rejection patterns
+
+## 🧪 Performance Modes
+
+Three operational modes patterns frequently referenced during tuning and benchmarking:
+
+### Standard Mode (Default)
+```ts
+const engine = createQNCEEngine(storyData);
+// Suitable for most dev scenarios; minimal overhead.
+```
+
+### Performance Mode
+```ts
+const engine = createQNCEEngine(storyData, {}, true);
+// Enables: object pooling, ThreadPool, perf events.
+```
+
+### Performance Mode + Custom ThreadPool
+```ts
+const engine = createQNCEEngine(storyData, {}, true, {
+  maxWorkers: 4,
+  queueLimit: 200,
+  enableProfiling: true
+});
+// Fine‑tuned background execution & profiling.
+```
+
+## 🎯 Performance Targets & Benchmarks
+
+Current sprint targets alongside representative observations (non-binding; provide directional validation):
+
+| Metric | Target | Current | Status |
+|--------|--------|---------|--------|
+| Object Pool Hit Rate | >95% | 100% | ✅ |
+| Memory Allocation Reduction | >90% | >90% | ✅ |
+| Hot-Reload Frame Stall | <2ms | 3.35ms | 🔄 68% improvement |
+| State Transition Time | <5ms | <1ms | ✅ |
+| Cache Hit Rate | >95% | >92% | ✅ |
+| ThreadPool Processing | Non-blocking | ✅ | ✅ |
+
+### Benchmark Snapshots
+
+Object Pooling:
+```
+Standard Mode:     ~1000 allocations / 100 transitions
+Performance Mode:  ~100 allocations / 100 transitions (≈90% reduction)
+GC Pressure:       Eliminated for pooled classes
+```
+
+Hot-Reload (Story ~50 nodes):
+```
+Comparison: 0.14ms
+Patch:      3.35ms
+Total:      3.49ms (target <2ms still under optimization)
+```
+
+ThreadPool:
+```
+Throughput:     1000+ jobs/sec (synthetic)
+Scheduling:     Priority aware
+Environment:    Browser + Node compatible
+```
+
+## 🚀 Production Deployment Quick Start
+
+### Installation
+```bash
+npm install qnce-engine
+npm install -g qnce-engine   # Optional CLI dashboard
+```
+
+### Example Production Init
+```ts
+const engine = createQNCEEngine(storyData, {}, true, {
+  maxWorkers: 4,
+  queueLimit: 500,
+  enableProfiling: true
+});
+
+// Periodic metrics export (example)
+setInterval(() => {
+  const summary = perf.summary();
+  monitoringService.sendMetrics({
+    cacheHitRate: summary.cacheHitRate,
+    hotReloadAvg: summary.hotReloadPerformance.avgTime,
+    workerUtilization: engine.getThreadPoolStats().workerUtilization
+  });
+}, 30000);
+```
+
+## 🔧 Performance Tuning Recipes
+
+High Throughput:
+```ts
+createQNCEEngine(storyData, {}, true, { maxWorkers: 8, queueLimit: 1000, enableProfiling: false });
+```
+
+Development / Diagnostics:
+```ts
+createQNCEEngine(storyData, {}, true, { maxWorkers: 2, queueLimit: 50, enableProfiling: true });
+// Use: qnce-perf live 500
+```
+
+## 🩺 Troubleshooting (Extended)
+
+Memory Pressure:
+1. Inspect pool stats: `engine.getPoolStats()`
+2. Confirm perf mode enabled
+3. Audit custom handlers for retained references
+
+Slow Hot-Reload:
+1. `qnce-perf dashboard` → check hot-reload section
+2. Split very large story diffs into batches
+3. Validate minimal unrelated node churn
+
+Queue Overflows:
+1. Inspect `engine.getThreadPoolStats().queuedJobs`
+2. Increase `maxWorkers` / `queueLimit`
+3. Reduce low-priority background submissions
+
+## 🔀 Migration Guide (v0.1.0 → v1.2.0-sprint2)
+
+No breaking API changes. Enable performance mode explicitly to opt into advanced systems:
+```ts
+// Before
+const engine = createQNCEEngine(storyData);
+// After
+const engine = createQNCEEngine(storyData, {}, true);
+```
+
+CLI Adoption:
+```bash
+npm install -g qnce-engine@1.2.0-sprint2
+qnce-perf live
+```
+
+## ✅ Sprint Summary
+
+Sprint #2 Deliverables Achieved:
+- 90%+ allocation reduction via pooling
+- Background ThreadPool processing
+- Hot-reload improvement (~68%)
+- Comprehensive profiling & adaptive flush pipeline (beta heuristics)
+- CLI dashboard for real-time insights
+
+The engine is production-ready with evolving adaptive heuristics (provide feedback on backlog/latency/rejection traces for tuning).
+
+
+## 🔄 Phase 2 (Wave 1) Additions (@beta)
+
+Version: 1.4.0-beta.0 introduces incremental reliability & observability upgrades to the flush pipeline.
+
+### 1. Retry-Once Dispatch
+On the first rejected batch dispatch the reporter attempts exactly one immediate retry when:
+* `consecutiveRejects === 1`
+* `p95DispatchLatencyMs < 200`
+
+This reduces transient loss without causing uncontrolled retry storms (subsequent failures rely solely on exponential backoff).
+
+### 2. Smoothed p95 (EMA)
+Metric: `smoothedP95DispatchLatencyMs` provides an exponential moving average (alpha=0.2) of raw p95 latency, reducing volatility for future adaptive controls.
+
+Properties:
+* Always trends toward raw p95
+* Resets to 0 with no samples
+* Lightweight (constant space, O(1) update)
+
+### 3. Extended Flush Metrics
+`PerfFlushMetrics` now exposes:
+```ts
+interface PerfFlushMetrics {
+  backoffActive?: boolean;      // true if inside current backoff window
+  consecutiveRejects?: number;  // current rejection streak count
+  smoothedP95DispatchLatencyMs?: number; // EMA-smoothed p95 latency
+}
+```
+
+Example:
+```ts
+const m = getPerfReporter().getFlushMetrics();
+console.log({
+  p95: m.p95DispatchLatencyMs,
+  smoothed: m.smoothedP95DispatchLatencyMs,
+  backoffActive: m.backoffActive,
+  consecutiveRejects: m.consecutiveRejects,
+  rejectionRate: m.rejectionRate
+});
+```
+
+### 4. Adaptive Sampling Scaffold
+Disabled by default. Enable with:
+```bash
+export QNCE_ADAPTIVE_SAMPLING=1
+```
+Current prototype uses an EMA of events/sec to interpolate a sample rate between configured low/high watermarks. All events recorded when disabled.
+
+### 5. Thread Pool Override (Test Only)
+For deterministic retry testing (non-public, unstable):
+```ts
+// @ts-expect-error internal
+PerfReporter.__setThreadPoolOverride({ writeTelemetry: () => Promise.resolve() });
+```
+Never rely on this in production; it may be removed without notice.
+
+### 6. Persistence Micro-Latency Threshold Update
+Save/load/checkpoint tests now assert <10ms (previous <2ms proved brittle after added instrumentation). Still enforces a tight micro-budget while avoiding CI flakiness.
+
+### 7. Environment Flags Summary
+| Flag | Purpose | Default |
+|------|---------|---------|
+| `QNCE_SUPPRESS_PERF_WARN` | Suppress console warnings for rejected flushes | Off |
+| `QNCE_DISABLE_ADAPTIVE_BATCH` | Force fixed batch size (disable dynamic sizing) | Off |
+| `QNCE_ADAPTIVE_SAMPLING` | Enable beta sampling scaffold | Off |
+
+### 8. Planned Follow-Ups
+* Configurable smoothing alpha & decay windows
+* Structured retry outcome telemetry (success vs loss metrics)
+* Critical event class exemption list for sampling
+* Percentile window rotation + reservoir sampling
+
+Please include `p95DispatchLatencyMs`, `smoothedP95DispatchLatencyMs`, `rejectionRate`, and `consecutiveRejects` snapshots when filing performance issues.
+
+
 ---
 
 **Ready for Production:** QNCE v1.2.0-sprint2 delivers comprehensive performance optimization with real-time monitoring capabilities. All systems tested and production-ready! 🚀
+
+<!-- PROFILING-SNAPSHOT:START -->
+
+
+### Profiling Snapshot (Automated)
+
+Generated: 2025-09-10T18:17:48.505Z
+
+Condition evaluation benchmark cold vs warm cache latency (milliseconds). Targets: keep warm p50 < 0.002 ms for simple expressions.
+
+
+| Expr | Cold p50 | Cold p95 | Warm p50 | Warm p95 |
+|------|---------:|---------:|---------:|---------:|
+
+
+| flags.score > 10 && flags.lives >= 2 | 0.0018 | 0.0022 | 0.0011 | 0.0012 |
+| flags.mode === "hard" || flags.debug | 0.0012 | 0.0018 | 0.0006 | 0.0006 |
+| flags.a && flags.b && flags.c && flags.d | 0.0011 | 0.0013 | 0.0005 | 0.0005 |
+| flags.combo > 5 && (flags.streak >= 3… | 0.0012 | 0.0013 | 0.0004 | 0.0005 |
+
+
+<!-- PROFILING-SNAPSHOT:END -->

@@ -1,7 +1,17 @@
 // Telemetry Types and Interfaces (Sprint 4.1)
 
+/**
+ * Environment identifier for telemetry context
+ * @beta
+ * @experimental
+ */
 export type Env = 'dev' | 'test' | 'prod';
 
+/**
+ * Generic telemetry event shape emitted by the engine
+ * @beta
+ * @experimental
+ */
 export interface QEvent<T extends string = string, P = unknown> {
   type: T;
   payload: P;
@@ -19,6 +29,11 @@ export interface QEvent<T extends string = string, P = unknown> {
   };
 }
 
+/**
+ * Adapter contract for delivering batched telemetry events
+ * @beta
+ * @experimental
+ */
 export interface TelemetryAdapter {
   configure?(opts: Record<string, unknown>): void;
   send(batch: QEvent[]): Promise<void>;
@@ -26,6 +41,11 @@ export interface TelemetryAdapter {
   dispose?(): Promise<void>;
 }
 
+/**
+ * Configuration options for telemetry system
+ * @beta
+ * @experimental
+ */
 export interface TelemetryOptions {
   adapter: TelemetryAdapter;
   sampleRate?: number;          // 0..1
@@ -36,8 +56,15 @@ export interface TelemetryOptions {
   enabled?: boolean;            // default false
   defaultCtx?: Partial<QEvent['ctx']>; // appVersion, engineVersion, env, storyId
   sampleSeed?: number;          // for deterministic sampling in tests
+  /** Overflow strategy when queue is full (default 'drop') */
+  overflowStrategy?: 'drop' | 'drop-oldest' | 'error';
 }
 
+/**
+ * Public telemetry facade used by engine and consumers
+ * @beta
+ * @experimental
+ */
 export interface Telemetry {
   configure(opts: Partial<TelemetryOptions>): void;
   emit<T extends string, P>(event: QEvent<T, P>): void;

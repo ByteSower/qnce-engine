@@ -19,6 +19,7 @@ import { QNCEEngine } from '../../engine/core';
  * - Ctrl+Y / Cmd+Y / Ctrl+Shift+Z: Redo
  * - Ctrl+S / Cmd+S: Manual autosave
  * - Ctrl+R / Cmd+R: Reset narrative (disabled by default)
+ * @public
  */
 export function useKeyboardShortcuts(
   engine: QNCEEngine,
@@ -89,7 +90,8 @@ export function useKeyboardShortcuts(
           try {
             engine.undo();
           } catch (error) {
-            console.error('[QNCE] Undo failed:', error);
+            // eslint-disable-next-line no-console -- surfaced only during development for debugging
+            if (process.env.NODE_ENV !== 'production') console.error('[QNCE] Undo failed:', error);
           }
           handled = true;
           break;
@@ -105,7 +107,8 @@ export function useKeyboardShortcuts(
             try {
               engine.redo();
             } catch (error) {
-              console.error('[QNCE] Redo failed:', error);
+              // eslint-disable-next-line no-console
+              if (process.env.NODE_ENV !== 'production') console.error('[QNCE] Redo failed:', error);
             }
             handled = true;
             break;
@@ -119,7 +122,8 @@ export function useKeyboardShortcuts(
       for (const combo of bindings.save || []) {
         if (matchesKeyCombo(keyboardEvent, combo)) {
           engine.manualAutosave().catch((error) => {
-            console.warn('[QNCE] Manual autosave failed:', error.message);
+            // eslint-disable-next-line no-console
+            if (process.env.NODE_ENV !== 'production') console.warn('[QNCE] Manual autosave failed:', (error as Error).message);
           });
           handled = true;
           break;
@@ -136,7 +140,8 @@ export function useKeyboardShortcuts(
             try {
               engine.resetNarrative();
             } catch (error) {
-              console.error('[QNCE] Reset failed:', error);
+              // eslint-disable-next-line no-console
+              if (process.env.NODE_ENV !== 'production') console.error('[QNCE] Reset failed:', error);
             }
             handled = true;
             break;
@@ -175,7 +180,9 @@ export function useKeyboardShortcuts(
     if (bindings.reset?.length) shortcuts.push(`Reset: ${bindings.reset.join(', ')}`);
 
     if (shortcuts.length > 0) {
-      console.log('[QNCE] Active keyboard shortcuts:', shortcuts.join(' | '));
+      // Single concise log; stringify to avoid [object Object]
+      // eslint-disable-next-line no-console
+      if (process.env.NODE_ENV !== 'production') console.log('[QNCE] Active keyboard shortcuts:', shortcuts.join(' | '));
     }
   }, [enabled, bindings]);
 }

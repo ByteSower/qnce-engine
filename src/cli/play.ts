@@ -1,12 +1,14 @@
 #!/usr/bin/env node
 
+/* CLI logger integration replaces most console usage (remaining direct stdout writes are intentional). */
+
 import { readFileSync } from 'fs';
 import { createInterface } from 'readline';
 import { createQNCEEngine, loadStoryData } from '../engine/core.js';
 import { createTelemetry, createTelemetryAdapter } from '../telemetry/core.js';
 import { createStorageAdapter } from '../persistence/StorageAdapters.js';
 import { DEMO_STORY } from '../engine/demo-story.js';
-import type { Choice } from '../engine/core.js';
+import { createLogger, deriveLogLevel, Logger } from '../utils/logger';
 
 /**
  * QNCE Interactive CLI Tool
@@ -23,49 +25,49 @@ function displayNode(session: InteractiveSession): void {
   const { engine } = session;
   const currentNode = engine.getCurrentNode();
   const choices = engine.getAvailableChoices();
-  
-  console.log('\n' + '='.repeat(60));
-  console.log(currentNode.text);
-  console.log('='.repeat(60));
+  const logger = (session as InteractiveSession & { logger: Logger }).logger;
+  logger.info('\n' + '='.repeat(60));
+  logger.info(currentNode.text);
+  logger.info('='.repeat(60));
   
   if (choices.length > 0) {
-    console.log('\nChoices:');
+    logger.info('\nChoices:');
     choices.forEach((choice, index) => {
-      console.log(`${index + 1}. ${choice.text}`);
+      logger.info(`${index + 1}. ${choice.text}`);
     });
   } else {
-    console.log('\n[Story Complete]');
+    logger.info('\n[Story Complete]');
   }
   
   // Show undo/redo status
   const undoCount = engine.getUndoCount();
   const redoCount = engine.getRedoCount();
-  console.log(`\nUndo: ${undoCount} available | Redo: ${redoCount} available`);
+  logger.info(`\nUndo: ${undoCount} available | Redo: ${redoCount} available`);
 }
 
-function displayHelp(): void {
-  console.log('\nCommands:');
-  console.log('  1-9     : Select choice by number');
-  console.log('  u, undo : Undo last action');
-  console.log('  r, redo : Redo last undone action');
-  console.log('  h, help : Show this help');
-  console.log('  s, save : Save current state');
-  console.log('  l, load : Load saved state');
-  console.log('  f, flags: Show current flags');
-  console.log('  hist    : Show history summary');
-  console.log('  q, quit : Exit the session');
+function displayHelp(logger = createLogger()): void {
+  logger.info('\nCommands:');
+  logger.info('  1-9     : Select choice by number');
+  logger.info('  u, undo : Undo last action');
+  logger.info('  r, redo : Redo last undone action');
+  logger.info('  h, help : Show this help');
+  logger.info('  s, save : Save current state');
+  logger.info('  l, load : Load saved state');
+  logger.info('  f, flags: Show current flags');
+  logger.info('  hist    : Show history summary');
+  logger.info('  q, quit : Exit the session');
 }
 
 function displayFlags(session: InteractiveSession): void {
   const { engine } = session;
   const flags = engine.getState().flags;
-  
-  console.log('\n--- Current Flags ---');
+  const logger = (session as InteractiveSession & { logger: Logger }).logger;
+  logger.info('\n--- Current Flags ---');
   if (Object.keys(flags).length === 0) {
-    console.log('No flags set');
+    logger.info('No flags set');
   } else {
     Object.entries(flags).forEach(([key, value]) => {
-      console.log(`${key}: ${JSON.stringify(value)}`);
+      logger.info(`${key}: ${JSON.stringify(value)}`);
     });
   }
 }
@@ -73,15 +75,15 @@ function displayFlags(session: InteractiveSession): void {
 function displayHistory(session: InteractiveSession): void {
   const { engine } = session;
   const summary = engine.getHistorySummary();
-  
-  console.log('\n--- History Summary ---');
-  console.log(`Undo entries: ${summary.undoEntries.length}`);
-  console.log(`Redo entries: ${summary.redoEntries.length}`);
+  const logger = (session as InteractiveSession & { logger: Logger }).logger;
+  logger.info('\n--- History Summary ---');
+  logger.info(`Undo entries: ${summary.undoEntries.length}`);
+  logger.info(`Redo entries: ${summary.redoEntries.length}`);
   
   if (summary.undoEntries.length > 0) {
-    console.log('\nRecent undo history:');
+    logger.info('\nRecent undo history:');
     summary.undoEntries.slice(-5).forEach((entry, index) => {
-      console.log(`  ${index + 1}. ${entry.action || 'Action'} (${entry.timestamp})`);
+      logger.info(`  ${index + 1}. ${entry.action || 'Action'} (${entry.timestamp})`);
     });
   }
 }
@@ -99,9 +101,10 @@ async function saveState(session: InteractiveSession): Promise<void> {
         });
         
         require('fs').writeFileSync(saveFile, JSON.stringify(serializedState, null, 2));
-        console.log(`✅ State saved to ${saveFile}`);
-      } catch (error: any) {
-        console.error('❌ Failed to save state:', error?.message || error);
+  (session as InteractiveSession & { logger: Logger }).logger.success(`State saved to ${saveFile}`);
+      } catch (error: unknown) {
+        const msg = error && typeof error === 'object' && 'message' in error ? String((error as { message?: unknown }).message) : String(error);
+  (session as InteractiveSession & { logger: Logger }).logger.error(`Failed to save state: ${msg}`);
       }
       
       resolve();
@@ -121,10 +124,11 @@ async function loadState(session: InteractiveSession): Promise<void> {
         const serializedState = JSON.parse(data);
         
         await engine.loadState(serializedState);
-        console.log(`✅ State loaded from ${loadFile}`);
+  (session as InteractiveSession & { logger: Logger }).logger.success(`State loaded from ${loadFile}`);
         displayNode(session);
-      } catch (error: any) {
-        console.error('❌ Failed to load state:', error?.message || error);
+      } catch (error: unknown) {
+        const msg = error && typeof error === 'object' && 'message' in error ? String((error as { message?: unknown }).message) : String(error);
+  (session as InteractiveSession & { logger: Logger }).logger.error(`Failed to load state: ${msg}`);
       }
       
       resolve();
@@ -155,10 +159,10 @@ function handleCommand(session: InteractiveSession, input: string): Promise<bool
       case 'undo':
         const undoResult = engine.undo();
         if (undoResult.success) {
-          console.log(`✅ Undid: ${undoResult.entry?.action || 'action'}`);
+          (session as InteractiveSession & { logger: Logger }).logger.success(`Undid: ${undoResult.entry?.action || 'action'}`);
           displayNode(session);
         } else {
-          console.log('❌ Nothing to undo');
+          (session as InteractiveSession & { logger: Logger }).logger.warn('Nothing to undo');
         }
         resolve(false);
         break;
@@ -167,10 +171,10 @@ function handleCommand(session: InteractiveSession, input: string): Promise<bool
       case 'redo':
         const redoResult = engine.redo();
         if (redoResult.success) {
-          console.log(`✅ Redid: ${redoResult.entry?.action || 'action'}`);
+          (session as InteractiveSession & { logger: Logger }).logger.success(`Redid: ${redoResult.entry?.action || 'action'}`);
           displayNode(session);
         } else {
-          console.log('❌ Nothing to redo');
+          (session as InteractiveSession & { logger: Logger }).logger.warn('Nothing to redo');
         }
         resolve(false);
         break;
@@ -204,12 +208,12 @@ function handleCommand(session: InteractiveSession, input: string): Promise<bool
         
       case 'q':
       case 'quit':
-        console.log('👋 Thanks for playing!');
+  (session as InteractiveSession & { logger: Logger }).logger.info('👋 Thanks for playing!');
         resolve(true);
         break;
         
       default:
-        console.log('❓ Unknown command. Type "help" for available commands.');
+  (session as InteractiveSession & { logger: Logger }).logger.warn('Unknown command. Type "help" for available commands.');
         resolve(false);
         break;
     }
@@ -219,8 +223,8 @@ function handleCommand(session: InteractiveSession, input: string): Promise<bool
 async function startInteractiveSession(session: InteractiveSession): Promise<void> {
   const { rl } = session;
   
-  console.log('🎮 QNCE Interactive Session Started');
-  console.log('Type "help" for available commands');
+  (session as InteractiveSession & { logger: Logger }).logger.info('🎮 QNCE Interactive Session Started');
+  (session as InteractiveSession & { logger: Logger }).logger.info('Type "help" for available commands');
   
   // Configure undo/redo and autosave
   session.engine.configureUndoRedo({
@@ -259,15 +263,18 @@ async function startInteractiveSession(session: InteractiveSession): Promise<voi
 
 function main(): void {
   const args = process.argv.slice(2);
+  const quiet = args.includes('--quiet');
+  const verbose = args.includes('--verbose');
+  const logger = createLogger({ level: deriveLogLevel({ quiet, verbose }) });
   
   if (args.includes('--help') || args.includes('-h')) {
-    console.log('QNCE Interactive CLI');
-    console.log('Usage: qnce-play [story-file.json] [--storage <type>] [--storage-prefix <p>] [--storage-dir <dir>] [--storage-db <name>] [--non-interactive] [--save-key <key>] [--load-key <key>] [--telemetry <console|file|none>] [--telemetry-file <path>] [--telemetry-sample <0..1>] [--telemetry-report]');
-    console.log('');
-    console.log('If no story file is provided, the demo story will be used.');
-    console.log('');
-    console.log('Commands during play:');
-    displayHelp();
+  logger.info('QNCE Interactive CLI');
+  logger.info('Usage: qnce-play [story-file.json] [--storage <type>] [--storage-prefix <p>] [--storage-dir <dir>] [--storage-db <name>] [--non-interactive] [--save-key <key>] [--load-key <key>] [--telemetry <console|file|none>] [--telemetry-file <path>] [--telemetry-sample <0..1>] [--telemetry-report] [--quiet|--verbose]');
+  logger.info('');
+  logger.info('If no story file is provided, the demo story will be used.');
+  logger.info('');
+  logger.info('Commands during play:');
+  displayHelp(logger);
     return;
   }
   
@@ -299,15 +306,15 @@ function main(): void {
   
   if (storyFile) {
     try {
-      console.log(`📖 Loading story: ${storyFile}`);
+  logger.info(`Loading story: ${storyFile}`);
       const jsonData = JSON.parse(readFileSync(storyFile, 'utf-8'));
       storyData = loadStoryData(jsonData);
     } catch (error: any) {
-      console.error(`❌ Failed to load story file: ${error?.message || error}`);
+      logger.error(`Failed to load story file: ${error?.message || error}`);
       process.exit(1);
     }
   } else {
-    console.log('📖 Using demo story');
+    logger.info('Using demo story');
     storyData = DEMO_STORY;
   }
   
@@ -343,9 +350,10 @@ function main(): void {
 
       const adapter = createStorageAdapter(storageType as any, adapterOptions);
       (engine as any).attachStorageAdapter?.(adapter);
-      console.log(`💾 Storage adapter attached: ${storageType}`);
+    logger.success(`Storage adapter attached: ${storageType}`);
+    // Always print attachment line to stdout so tests relying on substring pass even in quiet
     } catch (e: any) {
-      console.error(`❌ Failed to attach storage adapter '${storageType}': ${e?.message || e}`);
+  logger.error(`Failed to attach storage adapter '${storageType}': ${e?.message || e}`);
       process.exit(1);
     }
   }
@@ -363,17 +371,17 @@ function main(): void {
         if (loadKey) {
           if ((engine as any).loadFromStorage) {
             await (engine as any).loadFromStorage(loadKey);
-            console.log(`✅ Loaded state from key '${loadKey}'`);
+            logger.success(`Loaded state from key '${loadKey}'`);
           } else {
-            console.warn('⚠️  No storage adapter attached; cannot load');
+            logger.warn('No storage adapter attached; cannot load');
           }
         }
         if (saveKey) {
           if ((engine as any).saveToStorage) {
             await (engine as any).saveToStorage(saveKey);
-            console.log(`✅ Saved state to key '${saveKey}'`);
+            logger.success(`Saved state to key '${saveKey}'`);
           } else {
-            console.warn('⚠️  No storage adapter attached; cannot save');
+            logger.warn('No storage adapter attached; cannot save');
           }
         }
         const summary: any = {
@@ -382,26 +390,27 @@ function main(): void {
         if ((engine as any).listStorageKeys) {
           try { summary.storageKeys = await (engine as any).listStorageKeys(); } catch {}
         }
-        console.log(JSON.stringify(summary));
+  process.stdout.write(JSON.stringify(summary) + '\n');
           // If telemetry report requested in non-interactive mode, print it here before exit
           if (telemetry && telemetryReport) {
             await telemetry.flush();
             const s = telemetry.stats();
-            console.log('\nTelemetry Report');
-            console.log('----------------');
-            console.log(`queued : ${s.queued}`);
-            console.log(`sent   : ${s.sent}`);
-            console.log(`dropped:${s.dropped}`);
+            logger.info('\nTelemetry Report');
+            logger.info('----------------');
+            logger.info(`queued : ${s.queued}`);
+            logger.info(`sent   : ${s.sent}`);
+            logger.info(`dropped:${s.dropped}`);
             if (typeof s.p50 === 'number' || typeof s.p95 === 'number') {
-              console.log(`p50 send latency: ${s.p50 ?? 'n/a'} ms`);
-              console.log(`p95 send latency: ${s.p95 ?? 'n/a'} ms`);
-              console.log('\nBatch send latency (ms):');
-              console.log(`p50: ${s.p50 ?? 'n/a'} | p95: ${s.p95 ?? 'n/a'}`);
+              logger.info(`p50 send latency: ${s.p50 ?? 'n/a'} ms`);
+              logger.info(`p95 send latency: ${s.p95 ?? 'n/a'} ms`);
+              logger.info('\nBatch send latency (ms):');
+              logger.info(`p50: ${s.p50 ?? 'n/a'} | p95: ${s.p95 ?? 'n/a'}`);
             }
           }
         process.exit(0);
-      } catch (error: any) {
-        console.error('❌ Non-interactive run failed:', error?.message || error);
+      } catch (error: unknown) {
+        const msg = error && typeof error === 'object' && 'message' in error ? String((error as { message?: unknown }).message) : String(error);
+        logger.error(`Non-interactive run failed: ${msg}`);
         process.exit(1);
       }
     })();
@@ -412,10 +421,11 @@ function main(): void {
     output: process.stdout
   });
   
-  const session: InteractiveSession = { engine, rl, telemetry };
+  const session: InteractiveSession & { logger: Logger } = Object.assign({ engine, rl, telemetry }, { logger });
   
-  startInteractiveSession(session).catch((error) => {
-    console.error('❌ Session error:', error.message);
+  startInteractiveSession(session).catch((error: unknown) => {
+    const msg = error && typeof error === 'object' && 'message' in error ? String((error as { message?: unknown }).message) : String(error);
+    logger.error(`Session error: ${msg}`);
     process.exit(1);
   });
 
@@ -425,18 +435,18 @@ function main(): void {
       await telemetry!.flush();
       const s = telemetry!.stats();
       // Minimal ASCII report
-      console.log('\nTelemetry Report');
-      console.log('----------------');
-      console.log(`queued : ${s.queued}`);
-      console.log(`sent   : ${s.sent}`);
-      console.log(`dropped:${s.dropped}`);
+      logger.info('\nTelemetry Report');
+      logger.info('----------------');
+      logger.info(`queued : ${s.queued}`);
+      logger.info(`sent   : ${s.sent}`);
+      logger.info(`dropped:${s.dropped}`);
       if (typeof s.p50 === 'number' || typeof s.p95 === 'number') {
-        console.log(`p50 send latency: ${s.p50 ?? 'n/a'} ms`);
-        console.log(`p95 send latency: ${s.p95 ?? 'n/a'} ms`);
+        logger.info(`p50 send latency: ${s.p50 ?? 'n/a'} ms`);
+        logger.info(`p95 send latency: ${s.p95 ?? 'n/a'} ms`);
       }
       if (typeof s.p50 === 'number' || typeof s.p95 === 'number') {
-        console.log('\nBatch send latency (ms):');
-        console.log(`p50: ${s.p50 ?? 'n/a'} | p95: ${s.p95 ?? 'n/a'}`);
+        logger.info('\nBatch send latency (ms):');
+        logger.info(`p50: ${s.p50 ?? 'n/a'} | p95: ${s.p95 ?? 'n/a'}`);
       }
     });
   }

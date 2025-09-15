@@ -240,11 +240,15 @@ export class StoryDeltaPatcher {
         };
       }
       
-      // Phase 2: Apply changes synchronously for speed
-      // For small deltas (<10 changes), apply immediately
-      // For larger deltas, use optimized batch processing
-      if (delta.nodeChanges.length <= 10) {
+      // Phase 2: Apply changes with adaptive strategy
+      //  - Small deltas (<=10): trivial fast loop
+      //  - Moderate deltas (11–500): fully synchronous optimized loop to avoid timer overhead
+      //  - Huge deltas (>500): batched w/ micro-yields to keep event loop responsive
+      const count = delta.nodeChanges.length;
+      if (count <= 10) {
         this.applyNodeChangesFast(delta.nodeChanges);
+      } else if (count <= 500) {
+        this.applyNodeChangesOptimized(delta.nodeChanges);
       } else {
         await this.applyNodeChanges(delta.nodeChanges);
       }
@@ -312,6 +316,16 @@ export class StoryDeltaPatcher {
   private applyNodeChangesFast(nodeChanges: NodeDelta[]): void {
     for (const change of nodeChanges) {
       this.applyNodeChange(change);
+    }
+  }
+
+  /**
+   * Optimized synchronous application for moderate-sized patches to minimize scheduling overhead.
+   * Avoids setTimeout batching cost that inflated duration in tests (~60ms -> <10ms for 100 adds).
+   */
+  private applyNodeChangesOptimized(nodeChanges: NodeDelta[]): void {
+    for (let i = 0; i < nodeChanges.length; i++) {
+      this.applyNodeChange(nodeChanges[i]);
     }
   }
   

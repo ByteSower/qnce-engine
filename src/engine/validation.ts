@@ -155,7 +155,7 @@ export class StandardValidationRules {
   static readonly CHOICE_ENABLED: ValidationRule = {
     name: 'choice-enabled',
     priority: 3,
-    validate(choice: Choice, _context: ValidationContext): ValidationResult {
+  validate(choice: Choice): ValidationResult {
       if (choice.enabled === false) {
         return {
           isValid: false,

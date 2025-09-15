@@ -11,6 +11,8 @@ function xorshift32(seed: number): () => number {
   };
 }
 
+/** Simple fixed-size ring buffer used by telemetry queue */
+/** @beta @experimental */
 export class RingBuffer<T> {
   private buf: Array<T | undefined>;
   private head = 0; // next write
@@ -48,8 +50,10 @@ export class RingBuffer<T> {
   }
 }
 
+/** Internal telemetry implementation */
+/** @beta @experimental */
 export class TelemetryImpl implements Telemetry {
-  private opts: Required<Omit<TelemetryOptions, 'adapter' | 'defaultCtx' | 'sampleSeed'>> & { defaultCtx?: TelemetryOptions['defaultCtx'], sampleSeed?: number };
+  private opts: Required<Omit<TelemetryOptions, 'adapter' | 'defaultCtx' | 'sampleSeed' | 'overflowStrategy'>> & { defaultCtx?: TelemetryOptions['defaultCtx'], sampleSeed?: number, overflowStrategy: NonNullable<TelemetryOptions['overflowStrategy']> };
   private adapter: TelemetryAdapter;
   private queue: RingBuffer<QEvent>;
   private dropped = 0;
@@ -70,8 +74,9 @@ export class TelemetryImpl implements Telemetry {
       onDrop: options.onDrop ?? (() => {}),
       enabled: options.enabled ?? false,
       defaultCtx: options.defaultCtx,
-      sampleSeed: options.sampleSeed
-    };
+      sampleSeed: options.sampleSeed,
+      overflowStrategy: options.overflowStrategy ?? 'drop'
+    } as typeof this.opts;
     this.queue = new RingBuffer<QEvent>(this.opts.maxQueue);
     const seed = (options.sampleSeed ?? Date.now()) & 0xffffffff;
     this.prng = xorshift32(seed);
@@ -96,7 +101,8 @@ export class TelemetryImpl implements Telemetry {
     }
     if (opts.onDrop) this.opts.onDrop = opts.onDrop;
     if (opts.enabled !== undefined) this.opts.enabled = opts.enabled;
-    if (opts.defaultCtx !== undefined) this.opts.defaultCtx = opts.defaultCtx;
+  if (opts.defaultCtx !== undefined) this.opts.defaultCtx = opts.defaultCtx;
+  if (opts.overflowStrategy) this.opts.overflowStrategy = opts.overflowStrategy;
   }
 
   emit<T extends string, P>(event: QEvent<T, P>): void {
@@ -111,8 +117,32 @@ export class TelemetryImpl implements Telemetry {
     const ctx = { ...this.opts.defaultCtx, ...event.ctx } as QEvent['ctx'];
     const enriched: QEvent = { ...event, ctx, meta: { ...(event.meta || {}), seq: this.seq++ } };
     if (!this.queue.push(enriched)) {
-      this.dropped++;
-      this.opts.onDrop('queue_full');
+      switch (this.opts.overflowStrategy) {
+        case 'drop':
+          this.dropped++;
+          this.opts.onDrop('queue_full');
+          return;
+        case 'drop-oldest': {
+          // Drain all, discard oldest (first), requeue rest, then push new
+          const drained = this.queue.drain(this.queue.size);
+          if (drained.length > 0) {
+            drained.shift();
+            this.dropped++;
+            this.opts.onDrop('queue_full');
+            for (const ev of drained) this.queue.push(ev);
+            this.queue.push(enriched);
+          } else {
+            // Queue reported full but drained empty (race) -> drop
+            this.dropped++;
+            this.opts.onDrop('queue_full');
+          }
+          return;
+        }
+        case 'error':
+          this.dropped++;
+          this.opts.onDrop('queue_full');
+          return; // emit silently ignores new event
+      }
     }
   }
 
@@ -125,7 +155,7 @@ export class TelemetryImpl implements Telemetry {
       await this.adapter.send(batch);
       const dt = Date.now() - t0;
       this.latencies.push(dt);
-      if (this.latencies.length > 200) this.latencies.shift(); // cap memory
+  if (this.latencies.length > 100) this.latencies.shift(); // cap memory (reduced from 200 to 100 to lower footprint)
       this.sent += batch.length;
     } catch {
       // On adapter failure, drop silently for 4.1; could retry in 4.2
@@ -156,8 +186,11 @@ export class TelemetryImpl implements Telemetry {
   private startTimer() {
     if (this.timer) return;
     this.timer = setInterval(() => { void this.flush(); }, this.opts.flushIntervalMs);
-    // Avoid keeping process alive
-    if (this.timer && (this.timer as any).unref) (this.timer as any).unref();
+    // Avoid keeping process alive (Node-specific). Narrow type before calling unref.
+    const maybeTimer = this.timer as NodeJS.Timeout | undefined;
+    if (maybeTimer && typeof (maybeTimer as NodeJS.Timeout).unref === 'function') {
+      maybeTimer.unref();
+    }
   }
   private restartTimer() {
     if (this.timer) clearInterval(this.timer);
@@ -173,6 +206,11 @@ export class TelemetryImpl implements Telemetry {
 }
 
 // Built-in adapters
+/**
+ * Built-in console adapter (dev-friendly pretty print)
+ * @beta
+ * @experimental
+ */
 export class ConsoleAdapter implements TelemetryAdapter {
   configure(): void {}
   async send(batch: QEvent[]): Promise<void> {
@@ -188,6 +226,11 @@ export interface FileAdapterOptions {
   path: string;
   rotateBytes?: number; // future
 }
+/**
+ * File adapter writing newline-delimited JSON events
+ * @beta
+ * @experimental
+ */
 export class FileAdapter implements TelemetryAdapter {
   private stream: WriteStream;
   constructor(private opts: FileAdapterOptions) {
@@ -209,7 +252,12 @@ export class FileAdapter implements TelemetryAdapter {
   async dispose(): Promise<void> { await this.flush(); this.stream.end(); }
 }
 
-export function createTelemetryAdapter(kind: 'console' | 'file', opts?: any): TelemetryAdapter {
+/**
+ * Factory for built-in telemetry adapters
+ * @beta
+ * @experimental
+ */
+export function createTelemetryAdapter(kind: 'console' | 'file', opts?: { path?: string }): TelemetryAdapter {
   switch (kind) {
     case 'console': return new ConsoleAdapter();
     case 'file': return new FileAdapter({ path: opts?.path || 'qnce-telemetry.ndjson' });
@@ -217,6 +265,11 @@ export function createTelemetryAdapter(kind: 'console' | 'file', opts?: any): Te
   }
 }
 
+/**
+ * Create a telemetry instance; pass adapter + options
+ * @beta
+ * @experimental
+ */
 export function createTelemetry(options: TelemetryOptions): Telemetry {
   return new TelemetryImpl(options);
 }

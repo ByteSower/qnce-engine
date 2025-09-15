@@ -1,5 +1,7 @@
 #!/usr/bin/env node
 
+/* eslint-disable no-console */
+
 import { perf, getPerfReporter } from '../performance/PerfReporter.js';
 import { getThreadPool } from '../performance/ThreadPool.js';
 
@@ -165,7 +167,7 @@ function displayAlerts(summary: PerfSummary, thresholds: PerformanceThresholds, 
 /**
  * Live monitor mode - continuously update performance metrics
  */
-function startLiveMonitor(intervalMs: number = 2000, thresholds: PerformanceThresholds = DEFAULT_THRESHOLDS): void {
+function startLiveMonitor(intervalMs = 2000, thresholds: PerformanceThresholds = DEFAULT_THRESHOLDS): void {
   console.log(`🔴 Starting live performance monitor (${intervalMs}ms interval)`);
   console.log('Press Ctrl+C to stop');
 

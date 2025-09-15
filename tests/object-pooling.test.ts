@@ -65,7 +65,7 @@ describe('QNCE Object Pooling Integration (S2-T1)', () => {
   });
 
   test('should create engine with performance mode enabled', () => {
-    const engine = createQNCEEngine(testStoryData, {}, true);
+  const engine = createQNCEEngine(testStoryData, {}, true, undefined, { suppressTelemetryWarnings: true });
     expect(engine).toBeDefined();
     expect(engine.getPoolStats()).toBeDefined();
     
@@ -76,7 +76,7 @@ describe('QNCE Object Pooling Integration (S2-T1)', () => {
   });
 
   test('should use object pooling for flow tracking in performance mode', () => {
-    const engine = createQNCEEngine(testStoryData, {}, true);
+  const engine = createQNCEEngine(testStoryData, {}, true, undefined, { suppressTelemetryWarnings: true });
     
     // Get initial pool stats
     const initialStats = engine.getPoolStats();
@@ -101,7 +101,7 @@ describe('QNCE Object Pooling Integration (S2-T1)', () => {
   });
 
   test('should reuse pooled objects across multiple transitions', () => {
-    const engine = createQNCEEngine(testStoryData, {}, true);
+  const engine = createQNCEEngine(testStoryData, {}, true, undefined, { suppressTelemetryWarnings: true });
     
     // Make multiple transitions
     for (let i = 0; i < 5; i++) {
@@ -124,7 +124,7 @@ describe('QNCE Object Pooling Integration (S2-T1)', () => {
   });
 
   test('should clean up pooled objects on reset', () => {
-    const engine = createQNCEEngine(testStoryData, {}, true);
+  const engine = createQNCEEngine(testStoryData, {}, true, undefined, { suppressTelemetryWarnings: true });
     
     // Create some flow events
     const currentNode = engine.getCurrentNode();
@@ -145,7 +145,7 @@ describe('QNCE Object Pooling Integration (S2-T1)', () => {
   });
 
   test('should limit active flows to prevent memory leaks', () => {
-    const engine = createQNCEEngine(testStoryData, {}, true);
+  const engine = createQNCEEngine(testStoryData, {}, true, undefined, { suppressTelemetryWarnings: true });
     
     // Create more than 10 flow events to trigger cleanup
     for (let i = 0; i < 15; i++) {
@@ -167,7 +167,7 @@ describe('QNCE Object Pooling Integration (S2-T1)', () => {
   });
 
   test('should track performance metrics for pool efficiency', () => {
-    const engine = createQNCEEngine(testStoryData, {}, true);
+  const engine = createQNCEEngine(testStoryData, {}, true, undefined, { suppressTelemetryWarnings: true });
     
     // Make several transitions to generate pool activity
     const transitions = [
@@ -179,7 +179,7 @@ describe('QNCE Object Pooling Integration (S2-T1)', () => {
       ['beach', 'start']
     ];
     
-    for (const [from, to] of transitions) {
+  for (const [, to] of transitions) {
       const currentNode = engine.getCurrentNode();
       const choice = currentNode.choices.find(c => c.nextNodeId === to);
       if (choice) {
@@ -198,7 +198,7 @@ describe('QNCE Object Pooling Integration (S2-T1)', () => {
 
   test('should not affect engine behavior when performance mode is disabled', () => {
     const standardEngine = createQNCEEngine(testStoryData, {}, false);
-    const performanceEngine = createQNCEEngine(testStoryData, {}, true);
+  const performanceEngine = createQNCEEngine(testStoryData, {}, true, undefined, { suppressTelemetryWarnings: true });
     
     // Make the same sequence of choices in both engines
     const choices = [
@@ -207,7 +207,7 @@ describe('QNCE Object Pooling Integration (S2-T1)', () => {
       ['deep_north', 'start']
     ];
     
-    for (const [from, to] of choices) {
+  for (const [, to] of choices) {
       // Standard engine
       const standardNode = standardEngine.getCurrentNode();
       const standardChoice = standardNode.choices.find(c => c.nextNodeId === to);

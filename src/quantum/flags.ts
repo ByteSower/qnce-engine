@@ -1,10 +1,18 @@
-// Experimental: Feature flags utility to gate experimental behavior
-// @experimental
+/**
+ * Feature flags utility to gate experimental behavior
+ * @beta
+ * @experimental
+ */
 
+/**
+ * @beta
+ * @experimental
+ */
 export type FeatureFlagsConfig = {
   [flag: string]: boolean;
 };
 
+/** @beta @experimental */
 export class FeatureFlags {
   private flags: FeatureFlagsConfig;
 

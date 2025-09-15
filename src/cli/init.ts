@@ -1,5 +1,7 @@
 #!/usr/bin/env node
 
+/* eslint-disable no-console */
+
 import { writeFileSync, mkdirSync } from 'fs';
 import { join } from 'path';
 

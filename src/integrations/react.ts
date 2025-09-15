@@ -7,11 +7,12 @@
  */
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import { QNCEEngine, type QNCEState, type Choice, type NarrativeNode } from '../engine/core.js';
-import { type AutosaveConfig, type UndoRedoConfig, type SerializedState } from '../engine/types.js';
+import { QNCEEngine, type Choice, type NarrativeNode } from '../engine/core.js';
+import { type AutosaveConfig, type SerializedState } from '../engine/types.js';
 
 /**
  * Result type for undo/redo operations
+ * @public
  */
 export interface UndoRedoResult {
   success: boolean;
@@ -21,6 +22,7 @@ export interface UndoRedoResult {
 
 /**
  * History summary for undo/redo state
+ * @public
  */
 export interface HistorySummary {
   undoCount: number;
@@ -31,6 +33,7 @@ export interface HistorySummary {
 
 /**
  * Configuration for the useQNCE hook
+ * @public
  */
 export interface UseQNCEConfig {
   /** Enable automatic re-renders when state changes */
@@ -49,17 +52,18 @@ export interface UseQNCEConfig {
 
 /**
  * Return type for the useQNCE hook
+ * @public
  */
 export interface UseQNCEReturn {
   // Core narrative state
   engine: QNCEEngine;
   currentNode: NarrativeNode | null;
   availableChoices: Choice[];
-  flags: Record<string, any>;
+  flags: Record<string, unknown>;
   
   // Actions
   selectChoice: (choice: Choice | string) => Promise<void>;
-  setFlag: (key: string, value: any) => void;
+  setFlag: (key: string, value: unknown) => void;
   resetNarrative: () => void;
   
   // Undo/Redo functionality
@@ -135,6 +139,11 @@ export interface UseQNCEReturn {
  *   );
  * }
  * ```
+ */
+/** React integration hook for QNCE engine */
+/** @public */
+/** React integration hook for QNCE engine
+ * @public
  */
 export function useQNCE(engine: QNCEEngine, config: UseQNCEConfig = {}): UseQNCEReturn {
   const {
@@ -221,7 +230,7 @@ export function useQNCE(engine: QNCEEngine, config: UseQNCEConfig = {}): UseQNCE
     refresh();
   }, [engine, refresh, availableChoices]);
 
-  const setFlag = useCallback((key: string, value: any) => {
+  const setFlag = useCallback((key: string, value: unknown) => {
     engine.setFlag(key, value);
     refresh();
   }, [engine, refresh]);
@@ -327,6 +336,10 @@ export function useQNCE(engine: QNCEEngine, config: UseQNCEConfig = {}): UseQNCE
  * }
  * ```
  */
+/**
+ * React hook providing undo/redo state and actions for a QNCE engine instance.
+ * @public
+ */
 export function useUndoRedo(
   engine: QNCEEngine, 
   config: { maxUndoEntries?: number; maxRedoEntries?: number } = {}
@@ -423,9 +436,13 @@ export function useUndoRedo(
  * }
  * ```
  */
+/**
+ * React hook enabling autosave behavior with throttle and event triggers.
+ * @public
+ */
 export function useAutosave(
   engine: QNCEEngine,
-  config: { throttleMs?: number; triggers?: string[]; enabled?: boolean } = {}
+  config: { throttleMs?: number; triggers?: ('choice' | 'flag-change' | 'state-load' | 'branch-exit' | 'custom')[]; enabled?: boolean } = {}
 ): {
   autosave: () => Promise<void>;
   configure: (config: Partial<AutosaveConfig>) => void;
@@ -433,15 +450,15 @@ export function useAutosave(
   lastAutosave: Date | null;
   isSaving: boolean;
 } {
-  const { throttleMs = 100, triggers = ['choice', 'flag-change', 'state-load'], enabled = true } = config;
+  const { throttleMs = 100, triggers = ['choice', 'flag-change', 'state-load'] as const, enabled = true } = config;
   const [lastAutosave, setLastAutosave] = useState<Date | null>(null);
   const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
     engine.configureAutosave({
       enabled,
-      throttleMs,
-      triggers: triggers as any
+  throttleMs,
+  triggers: triggers as ('choice' | 'flag-change' | 'state-load' | 'branch-exit' | 'custom')[]
     });
   }, [engine, enabled, throttleMs, triggers]);
 
@@ -453,7 +470,7 @@ export function useAutosave(
     const originalSetFlag = engine.setFlag.bind(engine);
 
     // Track autosave calls
-    const trackAutosave = async (originalMethod: Function, ...args: any[]) => {
+    const trackAutosave = async <T extends unknown[], R>(originalMethod: (...args: T) => R, ...args: T): Promise<R> => {
       const result = originalMethod(...args);
       
       if (enabled) {
@@ -471,8 +488,8 @@ export function useAutosave(
     };
 
     // Override methods to track autosave
-    engine.selectChoice = (...args) => trackAutosave(originalSelectChoice, ...args);
-    engine.setFlag = (...args) => trackAutosave(originalSetFlag, ...args);
+  engine.selectChoice = (choice: Choice) => trackAutosave(originalSelectChoice, choice);
+  engine.setFlag = (key: string, value: unknown) => trackAutosave(originalSetFlag as (k: string, v: unknown) => void, key, value);
 
     return () => {
       // Restore original methods

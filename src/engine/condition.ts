@@ -2,9 +2,11 @@
 // Parses and evaluates conditional expressions for choice visibility
 
 import { QNCEState } from './core';
+import { internString } from '../utils/intern';
 
 /**
  * Error thrown when condition evaluation fails
+ * @public
  */
 export class ConditionEvaluationError extends Error {
   constructor(message: string, public readonly expression?: string, public readonly cause?: Error) {
@@ -15,6 +17,7 @@ export class ConditionEvaluationError extends Error {
 
 /**
  * Context object passed to condition evaluators
+ * @public
  */
 export interface ConditionContext {
   /** Current engine state */
@@ -27,34 +30,59 @@ export interface ConditionContext {
 
 /**
  * Custom evaluator function signature
+ * @public
  */
 export type CustomEvaluatorFunction = (expression: string, context: ConditionContext) => boolean;
 
 /**
  * Built-in expression operators
  */
-const OPERATORS = {
-  '>=': (a: any, b: any) => a >= b,
-  '<=': (a: any, b: any) => a <= b,
-  '>': (a: any, b: any) => a > b,
-  '<': (a: any, b: any) => a < b,
-  '==': (a: any, b: any) => a == b,
-  '===': (a: any, b: any) => a === b,
-  '!=': (a: any, b: any) => a != b,
-  '!==': (a: any, b: any) => a !== b,
-  '&&': (a: any, b: any) => a && b,
-  '||': (a: any, b: any) => a || b,
-} as const;
+type Primitive = string | number | boolean | null | undefined;
+type OperatorFn = (a: Primitive, b: Primitive) => unknown;
+// Reserved for future static analysis/validation passes (currently not referenced)
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+const OPERATORS: Record<string, OperatorFn> = {
+  '>=': (a, b) => (a as number | string) >= (b as number | string),
+  '<=': (a, b) => (a as number | string) <= (b as number | string),
+  '>': (a, b) => (a as number | string) > (b as number | string),
+  '<': (a, b) => (a as number | string) < (b as number | string),
+  '==': (a, b) => (a as unknown) == (b as unknown), // eslint-disable-line eqeqeq
+  '===': (a, b) => a === b,
+  '!=': (a, b) => (a as unknown) != (b as unknown), // eslint-disable-line eqeqeq
+  '!==': (a, b) => a !== b,
+  '&&': (a, b) => (a as unknown) && (b as unknown),
+  '||': (a, b) => (a as unknown) || (b as unknown),
+};
 
 /**
  * Condition evaluator service for parsing and executing conditional expressions
+ * @public
  */
 export class ConditionEvaluator {
   private customEvaluator?: CustomEvaluatorFunction;
   
   // Cache compiled functions for better performance
   private functionCache: Map<string, Function> = new Map();
-  private maxCacheSize: number = 100;
+  private maxCacheSize = 100;
+
+  // Expression canonicalization (sanitized+interned) LRU cache
+  private expressionCache: Map<string, string> = new Map();
+  private maxExpressionCacheSize = 256;
+
+  // Lightweight evaluation context pool (optional)
+  private contextPool: Array<{
+    flags: Record<string, unknown>;
+    state: { currentNodeId: string; flags: Record<string, unknown>; history: string[] };
+    timestamp: number;
+    customData: Record<string, unknown> | undefined;
+  }> = [];
+  private maxContextPoolSize = 64;
+  private poolingEnabled = false;
+
+  /** @internal Enable/disable context pooling (engine toggles in perf mode) */
+  enablePooling(enable: boolean) { this.poolingEnabled = enable; }
+  /** @internal Adjust pool cap during tuning */
+  setMaxContextPoolSize(size: number) { this.maxContextPoolSize = size; }
 
   /**
    * Set a custom evaluator function for handling complex conditions
@@ -104,14 +132,14 @@ export class ConditionEvaluator {
     }
 
     // Sanitize and prepare expression
-    const sanitizedExpression = this.sanitizeExpression(expression);
+  const sanitizedExpression = this.internAndNormalize(expression);
     
     // Handle simple cases first
     if (sanitizedExpression === 'true') return true;
     if (sanitizedExpression === 'false') return false;
 
     // Create safe evaluation context
-    const evalContext = this.createEvaluationContext(context);
+  const evalContext = this.createEvaluationContext(context);
     
     // Check function cache for performance
     let func = this.functionCache.get(sanitizedExpression);
@@ -142,13 +170,16 @@ export class ConditionEvaluator {
     }
     
     try {
-      return !!func(
+      const result = !!func(
         evalContext.flags,
         evalContext.state,
         evalContext.timestamp,
         evalContext.customData
       );
+      this.releaseEvaluationContext(evalContext);
+      return result;
     } catch (error) {
+      this.releaseEvaluationContext(evalContext);
       throw new ConditionEvaluationError(
         `Runtime error evaluating: ${expression}`,
         expression,
@@ -176,7 +207,7 @@ export class ConditionEvaluator {
       /\bdocument\b/g,
     ];
 
-    let sanitized = expression.trim();
+  const sanitized = expression.trim();
     
     for (const pattern of dangerous) {
       if (pattern.test(sanitized)) {
@@ -190,20 +221,54 @@ export class ConditionEvaluator {
     return sanitized;
   }
 
+  /** Normalize + intern expression with LRU retention */
+  private internAndNormalize(expression: string): string {
+    const sanitized = this.sanitizeExpression(expression);
+    if (this.expressionCache.has(sanitized)) {
+      const existing = this.expressionCache.get(sanitized)!;
+      return existing;
+    }
+    const canonical = internString(sanitized);
+    if (this.expressionCache.size >= this.maxExpressionCacheSize) {
+      const first = this.expressionCache.keys().next().value;
+      if (first) this.expressionCache.delete(first);
+    }
+    this.expressionCache.set(canonical, canonical);
+    return canonical;
+  }
+
   /**
    * Create a safe evaluation context from the condition context
    */
   private createEvaluationContext(context: ConditionContext) {
-    return {
-      flags: { ...context.state.flags },
-      state: {
-        currentNodeId: context.state.currentNodeId,
+    if (!this.poolingEnabled || this.contextPool.length === 0) {
+      return {
         flags: { ...context.state.flags },
-        history: [...context.state.history],
-      },
-      timestamp: context.timestamp,
-      customData: context.customData ? { ...context.customData } : {},
-    };
+        state: {
+          currentNodeId: context.state.currentNodeId,
+          flags: { ...context.state.flags },
+          history: [...context.state.history],
+        },
+        timestamp: context.timestamp,
+        customData: context.customData ? { ...context.customData } : {},
+      };
+    }
+    const ctx = this.contextPool.pop()!;
+    ctx.flags = { ...context.state.flags };
+    ctx.state.currentNodeId = context.state.currentNodeId;
+    ctx.state.flags = { ...context.state.flags };
+    ctx.state.history = [...context.state.history];
+    ctx.timestamp = context.timestamp;
+    ctx.customData = context.customData ? { ...context.customData } : {};
+    return ctx;
+  }
+
+  private releaseEvaluationContext(ctx: { flags: Record<string, unknown>; state: { currentNodeId: string; flags: Record<string, unknown>; history: string[] }; timestamp: number; customData: Record<string, unknown> | undefined; }) {
+    if (!this.poolingEnabled) return;
+    if (this.contextPool.length < this.maxContextPoolSize) {
+      ctx.customData = undefined; // drop potentially large data refs
+      this.contextPool.push(ctx);
+    }
   }
 
   /**
@@ -245,4 +310,5 @@ export class ConditionEvaluator {
 }
 
 // Create a global instance for the engine to use
+/** @public */
 export const conditionEvaluator = new ConditionEvaluator();

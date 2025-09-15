@@ -2,7 +2,6 @@ import { spawnSync } from 'node:child_process';
 import { resolve } from 'node:path';
 import { readFileSync } from 'node:fs';
 import { TwisonAdapter } from '../src/adapters/story/TwisonAdapter';
-import { CustomJSONAdapter } from '../src/adapters/story/CustomJSONAdapter';
 
 function runCli(args: string[], input?: string) {
   const bin = resolve(__dirname, '../dist/cli/import.js');

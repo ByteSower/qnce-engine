@@ -18,7 +18,7 @@ export interface StoryAdapter {
 }
 
 // Persistence envelope for saves
-export interface SaveEnvelope<TPayload = any> {
+export interface SaveEnvelope<TPayload = unknown> {
   version: number; // schema version
   storyId: string;
   storyVersion: string;

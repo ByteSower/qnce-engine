@@ -1,17 +1,17 @@
 // Experimental helper types for quantum primitives
 // These are opt-in and may change.
 
-/** @experimental */
+/** @beta @experimental */
 export type FeatureFlagKey = string;
 
-/** @experimental */
+/** @beta @experimental */
 export type EntangleTransform = (value: unknown) => unknown;
 
-/** @experimental */
+/** @beta @experimental */
 export interface PhasePredicateContext {
   flags: Record<string, unknown>;
   nodeId?: string;
 }
 
-/** @experimental */
+/** @beta @experimental */
 export type PhasePredicate = (ctx: PhasePredicateContext) => boolean;

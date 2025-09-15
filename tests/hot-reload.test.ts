@@ -1,5 +1,8 @@
 import { describe, test, expect, beforeEach } from '@jest/globals';
 import { StoryDeltaComparator, StoryDeltaPatcher, NodeDelta, StoryDelta, createDeltaTools } from '../src/performance/HotReloadDelta';
+// Internal story shape (test-only) to avoid any casts
+interface _StoryNode { id: string; text: string; choices: unknown[] }
+interface _StoryDataInternal { nodes: _StoryNode[] }
 import { createQNCEEngine, NarrativeNode } from '../src/engine/core';
 
 describe('Hot-Reload Delta Patching (S2-T3)', () => {
@@ -143,7 +146,7 @@ describe('Hot-Reload Delta Patching (S2-T3)', () => {
         ]
       };
       
-      const engine = createQNCEEngine(initialStory);
+  const engine = createQNCEEngine(initialStory, undefined, false, undefined, { minimalTelemetry: true });
       const patcher = new StoryDeltaPatcher(engine);
       
       const delta: StoryDelta = {
@@ -164,9 +167,9 @@ describe('Hot-Reload Delta Patching (S2-T3)', () => {
       expect(result.nodesChanged).toBe(1);
       
       // Verify the node was actually added
-      const storyData = (engine as any).storyData;
-      expect(storyData.nodes).toHaveLength(2);
-      expect(storyData.nodes.find((n: any) => n.id === 'new_node')).toBeDefined();
+  const storyData = (engine as unknown as { storyData: _StoryDataInternal }).storyData;
+  expect(storyData.nodes).toHaveLength(2);
+  expect(storyData.nodes.find((n) => n.id === 'new_node')).toBeDefined();
     });
 
     test('should apply node modifications to running engine', async () => {
@@ -177,7 +180,7 @@ describe('Hot-Reload Delta Patching (S2-T3)', () => {
         ]
       };
       
-      const engine = createQNCEEngine(initialStory);
+  const engine = createQNCEEngine(initialStory, undefined, false, undefined, { minimalTelemetry: true });
       const patcher = new StoryDeltaPatcher(engine);
       
       const delta: StoryDelta = {
@@ -210,7 +213,7 @@ describe('Hot-Reload Delta Patching (S2-T3)', () => {
         ]
       };
       
-      const engine = createQNCEEngine(initialStory);
+  const engine = createQNCEEngine(initialStory, undefined, false, undefined, { minimalTelemetry: true });
       const patcher = new StoryDeltaPatcher(engine);
       
       const delta: StoryDelta = {
@@ -238,7 +241,7 @@ describe('Hot-Reload Delta Patching (S2-T3)', () => {
         ]
       };
       
-      const engine = createQNCEEngine(initialStory);
+  const engine = createQNCEEngine(initialStory, undefined, false, undefined, { minimalTelemetry: true });
       const patcher = new StoryDeltaPatcher(engine);
       
       // Create large delta with many node additions
@@ -258,11 +261,12 @@ describe('Hot-Reload Delta Patching (S2-T3)', () => {
       const result = await patcher.applyDelta(delta);
       
       expect(result.success).toBe(true);
-      expect(result.duration).toBeLessThan(50); // Should handle large patches efficiently
+  // Restored performance target after optimization (<10ms for 100 node adds).
+  expect(result.duration).toBeLessThan(10);
       expect(result.nodesChanged).toBe(100);
       
       // Verify all nodes were added
-      const storyData = (engine as any).storyData;
+  const storyData = (engine as unknown as { storyData: _StoryDataInternal }).storyData;
       expect(storyData.nodes).toHaveLength(101); // 1 initial + 100 added
     });
   });

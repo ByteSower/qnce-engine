@@ -1,5 +1,7 @@
 // S2-T4: Profiler Event Instrumentation
 // PerfReporter for batched performance event collection and reporting
+import { getThreadPool } from './ThreadPool';
+import { createDefaultAdaptiveSampler } from './AdaptiveControllers';
 
 export interface PerfEvent {
   id: string;
@@ -35,6 +37,31 @@ export interface PerfReporterConfig {
   enableBackgroundFlush: boolean;
   maxEventHistory: number;
   enableConsoleOutput: boolean;
+  disableAdaptiveBatch?: boolean; // If true, skip dynamic batch sizing (use fixed batchSize)
+}
+
+/**
+ * Flush metrics snapshot returned by getPerfFlushMetrics().
+ * Designed to be immutable from consumer perspective (frozen object returned).
+ */
+export interface PerfFlushMetrics {
+  totalFlushAttempts: number;        // All flush() calls (manual + timer + auto batch)
+  successfulFlushes: number;         // flush() calls where at least one batch was handed to thread pool
+  rejectedFlushes: number;           // writeTelemetry promise rejected (queue limit, etc.)
+  totalBatchesDispatched: number;    // Number of writeTelemetry calls attempted
+  totalEventsDispatched: number;     // Sum of events length across dispatched batches (not including retained history)
+  lastFlushDurationMs: number;       // Duration in ms of the most recent flush dispatch loop
+  avgEventsPerBatch: number;         // totalEventsDispatched / totalBatchesDispatched (0 if none)
+  p50DispatchLatencyMs: number;      // Approximate latency of dispatching batches (coarse pre-adaptive placeholder)
+  p95DispatchLatencyMs: number;      // Approximate high percentile
+  smoothedP95DispatchLatencyMs?: number; // @beta EMA-smoothed p95 (if smoothing enabled)
+  histogramBuckets: ReadonlyArray<{ upperBoundMs: number; count: number }>; // Fixed latency buckets
+  rejectionRate: number;             // rejectedFlushes / totalBatchesDispatched (0 if none)
+  lastEffectiveBatchSize?: number;   // effective batch size used in last flush (dynamic sizing)
+  lastUpdated: number;               // performance.now() timestamp of last metrics mutation
+  adaptiveEnabled: boolean;          // true if dynamic batch sizing heuristics are active
+  backoffActive?: boolean;           // @beta indicates flush currently under backoff gate
+  consecutiveRejects?: number;       // @beta current rejection streak
 }
 
 /**
@@ -44,9 +71,37 @@ export interface PerfReporterConfig {
 export class PerfReporter {
   private events: PerfEvent[] = [];
   private config: PerfReporterConfig;
-  private flushTimer: any = null;
+  private flushTimer: NodeJS.Timeout | null = null;
+  // R2: Adaptive backoff state
+  private nextAllowedFlushTime = 0; // performance.now() timestamp gate for next flush
+  private consecutiveRejects = 0;   // sequential rejected dispatch streak
+  private backoffDelayMs = 0;       // current backoff window applied after last rejection
   private startTime: number;
   private activeSpans: Map<string, PerfEvent> = new Map();
+  // Adaptive sampling (@beta) – off by default; env QNCE_ADAPTIVE_SAMPLING enables
+  private sampler = createDefaultAdaptiveSampler();
+  // Flush metrics state (mutable internal, exposed via snapshot)
+  private metrics = {
+    totalFlushAttempts: 0,
+    successfulFlushes: 0,
+    rejectedFlushes: 0,
+    totalBatchesDispatched: 0,
+    totalEventsDispatched: 0,
+    lastFlushDurationMs: 0,
+    avgEventsPerBatch: 0,
+    dispatchLatencies: [] as number[], // raw latencies for simple percentile computation (bounded)
+    histogram: [5, 10, 25, 50, 100, 250, 500, 1000].map(upper => ({ upperBoundMs: upper, count: 0 })),
+    p50DispatchLatencyMs: 0,
+    p95DispatchLatencyMs: 0,
+  smoothedP95DispatchLatencyMs: 0,
+    rejectionRate: 0,
+    lastEffectiveBatchSize: 0,
+    lastUpdated: performance.now()
+  };
+  // Cap raw latency samples to prevent memory leak (sliding window)
+  private static readonly MAX_LATENCY_SAMPLES = 128;
+  // Placeholder smoother integration (@beta)
+  // Future: inject EMA smoother via config; keep optional to avoid affecting existing tests.
 
   constructor(config: Partial<PerfReporterConfig> = {}) {
     this.config = {
@@ -54,7 +109,8 @@ export class PerfReporter {
       flushInterval: config.flushInterval || 5000, // 5 seconds
       enableBackgroundFlush: config.enableBackgroundFlush !== false,
       maxEventHistory: config.maxEventHistory || 1000,
-      enableConsoleOutput: config.enableConsoleOutput || false
+      enableConsoleOutput: config.enableConsoleOutput || false,
+      disableAdaptiveBatch: config.disableAdaptiveBatch ?? (typeof process !== 'undefined' && !!process.env.QNCE_DISABLE_ADAPTIVE_BATCH)
     };
 
     this.startTime = performance.now();
@@ -65,6 +121,16 @@ export class PerfReporter {
   }
 
   /**
+   * Internal override hook for tests to inject a deterministic thread pool implementation.
+   * Not part of public API surface; subject to change without notice.
+   */
+  private static __threadPoolOverride: { writeTelemetry: (payload: unknown) => Promise<unknown> } | null = null;
+  // eslint-disable-next-line @typescript-eslint/naming-convention
+  static __setThreadPoolOverride(override: { writeTelemetry: (payload: unknown) => Promise<unknown> } | null): void {
+    PerfReporter.__threadPoolOverride = override;
+  }
+
+  /**
    * Record a performance event
    */
   record(
@@ -72,17 +138,19 @@ export class PerfReporter {
     metadata: Record<string, unknown> = {}, 
     category: PerfEvent['category'] = 'engine'
   ): string {
-    const event: PerfEvent = {
+    // Sampling: always retain error-like categories (none currently explicit; placeholder for future)
+    if (!this.sampler.isEnabled() || this.sampler.shouldSample()) {
+      const event: PerfEvent = {
       id: this.generateEventId(),
       type,
       timestamp: performance.now(),
       metadata,
       category
     };
-
-    this.events.push(event);
+      this.events.push(event);
     
-    if (this.config.enableConsoleOutput) {
+    if (this.config.enableConsoleOutput && process.env.NODE_ENV !== 'test') {
+      // eslint-disable-next-line no-console
       console.log(`[PERF] ${type}:`, metadata);
     }
 
@@ -90,8 +158,9 @@ export class PerfReporter {
     if (this.events.length >= this.config.batchSize) {
       this.flush();
     }
-
-    return event.id;
+      return event.id;
+    }
+    return 'perf-sampled';
   }
 
   /**
@@ -121,7 +190,10 @@ export class PerfReporter {
   endSpan(spanId: string, additionalMetadata: Record<string, unknown> = {}): void {
     const startEvent = this.activeSpans.get(spanId);
     if (!startEvent) {
-      console.warn(`[PERF] Span ${spanId} not found`);
+      if (process.env.NODE_ENV !== 'production') {
+        // eslint-disable-next-line no-console
+        console.warn(`[PERF] Span ${spanId} not found`);
+      }
       return;
     }
 
@@ -138,10 +210,13 @@ export class PerfReporter {
       }
     };
 
-    this.events.push(completeEvent);
+    if (!this.sampler.isEnabled() || this.sampler.shouldSample()) {
+      this.events.push(completeEvent);
+    }
     this.activeSpans.delete(spanId);
 
-    if (this.config.enableConsoleOutput) {
+    if (this.config.enableConsoleOutput && process.env.NODE_ENV !== 'test') {
+      // eslint-disable-next-line no-console
       console.log(`[PERF] ${startEvent.type} completed in ${duration.toFixed(2)}ms`);
     }
 
@@ -203,7 +278,7 @@ export class PerfReporter {
     
     let cacheHits = 0;
     let cacheMisses = 0;
-    let hotReloads: number[] = [];
+  const hotReloads: number[] = [];
 
     // Analyze events
     for (const event of this.events) {
@@ -288,18 +363,126 @@ export class PerfReporter {
    * Flush events to background processing
    */
   flush(): void {
+    // R2: Honor adaptive backoff; skip flush attempts while in backoff window
+    const nowCheck = performance.now();
+    if (nowCheck < this.nextAllowedFlushTime) {
+      return; // silently skip (no attempt counter increment)
+    }
+    const flushStart = performance.now();
+    this.metrics.totalFlushAttempts++;
     if (this.events.length === 0) return;
+    // Offload current batch to background thread pool
+    try {
+  const pool = PerfReporter.__threadPoolOverride || getThreadPool();
+      const baseBatch = Math.max(1, this.config.batchSize);
+      const total = this.events.length;
+      // Dynamic batch sizing (R6): scale up when many events & low latency, scale down on high latency or rejection streak
+      let effectiveBatchSize = baseBatch;
+      if (!this.config.disableAdaptiveBatch) {
+        const latP95 = this.metrics.p95DispatchLatencyMs;
+        const streak = this.consecutiveRejects;
+        if (streak >= 2) {
+          effectiveBatchSize = Math.max(10, Math.floor(baseBatch / Math.min(streak, 4))); // shrink under pressure
+        } else if (total > baseBatch * 4 && latP95 < 50) {
+          effectiveBatchSize = Math.min(baseBatch * 4, baseBatch + Math.floor((total / baseBatch) * 0.5) * baseBatch);
+        } else if (total > baseBatch * 2 && latP95 < 25) {
+          effectiveBatchSize = Math.min(baseBatch * 3, baseBatch * 2);
+        }
+      }
+      // Ensure not exceeding total events
+      effectiveBatchSize = Math.max(1, Math.min(effectiveBatchSize, total));
+      this.metrics.lastEffectiveBatchSize = effectiveBatchSize;
+      const shouldCoalesce = total <= effectiveBatchSize * 2;
+      if (shouldCoalesce) {
+        const batch = this.events.slice();
+        const dispatchStart = performance.now();
+          // Eagerly count batch dispatch attempt
+          this.metrics.totalBatchesDispatched++;
+          this.metrics.totalEventsDispatched += batch.length;
+          // Mark flush as having at least one dispatched batch (optimistic)
+          this.metrics.successfulFlushes = Math.max(this.metrics.successfulFlushes, 1);
+        void pool.writeTelemetry({ type: 'perf-events', events: batch })
+          .then(() => {
+            this.recordDispatchSuccessPostLatency(performance.now() - dispatchStart);
+            // Reset backoff streak on first success
+            this.consecutiveRejects = 0;
+            this.backoffDelayMs = 0;
+          })
+          .catch(err => {
+            const firstFailureLatency = performance.now() - dispatchStart;
+            this.recordDispatchFailure(err);
+            // Retry-once: only when first consecutive rejection and latency still moderate
+            if (this.consecutiveRejects === 1 && this.metrics.p95DispatchLatencyMs < 200) {
+              const retryStart = performance.now();
+              void pool.writeTelemetry({ type: 'perf-events', events: batch })
+                .then(() => {
+                  this.recordDispatchSuccessPostLatency(performance.now() - retryStart + firstFailureLatency);
+                  this.consecutiveRejects = 0;
+                  this.backoffDelayMs = 0;
+                })
+                .catch(err2 => {
+                  this.recordDispatchFailure(err2);
+                });
+            }
+          });
+      } else {
+        let start = 0;
+        while (start < total) {
+          const end = Math.min(start + effectiveBatchSize, total);
+          const batch = this.events.slice(start, end);
+          // Fire-and-forget background write; errors are swallowed in non-prod
+          const dispatchStart = performance.now();
+          this.metrics.totalBatchesDispatched++;
+          this.metrics.totalEventsDispatched += batch.length;
+          this.metrics.successfulFlushes = Math.max(this.metrics.successfulFlushes, 1);
+          void pool.writeTelemetry({ type: 'perf-events', events: batch })
+            .then(() => {
+              this.recordDispatchSuccessPostLatency(performance.now() - dispatchStart);
+              this.consecutiveRejects = 0;
+              this.backoffDelayMs = 0;
+            })
+            .catch(err => {
+              const firstFailureLatency = performance.now() - dispatchStart;
+              this.recordDispatchFailure(err);
+              if (this.consecutiveRejects === 1 && this.metrics.p95DispatchLatencyMs < 200) {
+                const retryStart = performance.now();
+                void pool.writeTelemetry({ type: 'perf-events', events: batch })
+                  .then(() => {
+                    this.recordDispatchSuccessPostLatency(performance.now() - retryStart + firstFailureLatency);
+                    this.consecutiveRejects = 0;
+                    this.backoffDelayMs = 0;
+                  })
+                  .catch(err2 => {
+                    this.recordDispatchFailure(err2);
+                  });
+              }
+            });
+          start = end;
+        }
+      }
+      // successfulFlushes is incremented only after at least one dispatch promise resolves
+    } catch (err) {
+      if (typeof process !== 'undefined' && process.env && process.env.NODE_ENV !== 'production') {
+        // eslint-disable-next-line no-console
+        console.warn('[PERF] flush integration unavailable:', err);
+      }
+    }
 
-    // TODO: Body - integrate with ThreadPool for background processing
-    // For now, just maintain event history with size limit
+    // Maintain bounded history to cap memory usage
     if (this.events.length > this.config.maxEventHistory) {
-      const excess = this.events.length - this.config.maxEventHistory;
-      this.events.splice(0, excess);
+      const startIndex = this.events.length - this.config.maxEventHistory;
+      // mutate in place to avoid new large arrays when possible
+      this.events.splice(0, startIndex);
     }
 
-    if (this.config.enableConsoleOutput) {
-      console.log(`[PERF] Flushed ${this.events.length} events`);
+    if (this.config.enableConsoleOutput && process.env.NODE_ENV !== 'test') {
+      // eslint-disable-next-line no-console
+      console.log(`[PERF] Flushed up to ${this.config.batchSize} per batch; retained ${this.events.length} events`);
     }
+    // finalize flush timing
+    this.metrics.lastFlushDurationMs = performance.now() - flushStart;
+    this.metrics.lastUpdated = performance.now();
+    this.recomputeDerivedMetrics();
   }
 
   /**
@@ -309,6 +492,10 @@ export class PerfReporter {
     this.flushTimer = setInterval(() => {
       this.flush();
     }, this.config.flushInterval);
+    // Prevent keeping Node process alive
+    if (this.flushTimer && typeof this.flushTimer.unref === 'function') {
+      this.flushTimer.unref();
+    }
   }
 
   /**
@@ -321,11 +508,119 @@ export class PerfReporter {
     }
   }
 
+  /** Dispose reporter (stop timers) */
+  dispose(): void { this.stopFlushTimer(); }
+
   /**
    * Generate unique event ID
    */
   private generateEventId(): string {
     return `perf-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+  }
+
+  /** Internal: record dispatch latency after counters were eagerly incremented */
+  private recordDispatchSuccessPostLatency(latencyMs: number): void {
+    const samples = this.metrics.dispatchLatencies;
+    samples.push(latencyMs);
+    if (samples.length > PerfReporter.MAX_LATENCY_SAMPLES) {
+      samples.splice(0, samples.length - PerfReporter.MAX_LATENCY_SAMPLES);
+    }
+    for (const bucket of this.metrics.histogram) {
+      if (latencyMs <= bucket.upperBoundMs) { bucket.count++; break; }
+    }
+    this.metrics.successfulFlushes = Math.max(this.metrics.successfulFlushes, 1);
+  }
+
+  /** Internal: record dispatch failure */
+  private recordDispatchFailure(err: unknown): void {
+    this.metrics.rejectedFlushes++;
+    // R2: update adaptive backoff streak + compute new delay (exponential, capped)
+    this.consecutiveRejects++;
+    const exponent = Math.min(this.consecutiveRejects - 1, 5); // cap growth
+    const base = 20; // ms
+    this.backoffDelayMs = Math.min(base * Math.pow(2, exponent), 500);
+    this.nextAllowedFlushTime = performance.now() + this.backoffDelayMs;
+    if (typeof process !== 'undefined' && process.env && process.env.NODE_ENV !== 'production') {
+      const suppress = !!process.env.QNCE_SUPPRESS_PERF_WARN; // R1: explicit env flag
+      if (!suppress) {
+        const message = (err && typeof err === 'object' && 'message' in err) ? (err as { message?: unknown }).message : undefined;
+        // eslint-disable-next-line no-console
+        console.warn('[PERF] background flush failed:', message || err);
+      }
+    }
+  }
+
+  /** Compute derived metrics (avg, percentiles) */
+  private recomputeDerivedMetrics(): void {
+    const { totalBatchesDispatched, totalEventsDispatched, dispatchLatencies } = this.metrics;
+    this.metrics.avgEventsPerBatch = totalBatchesDispatched > 0 ? totalEventsDispatched / totalBatchesDispatched : 0;
+    this.metrics.rejectionRate = totalBatchesDispatched > 0 ? this.metrics.rejectedFlushes / totalBatchesDispatched : 0;
+    if (dispatchLatencies.length > 0) {
+      const sorted = [...dispatchLatencies].sort((a, b) => a - b);
+      const p50Index = Math.floor(0.5 * (sorted.length - 1));
+      const p95Index = Math.floor(0.95 * (sorted.length - 1));
+      this.metrics.p50DispatchLatencyMs = sorted[p50Index];
+      this.metrics.p95DispatchLatencyMs = sorted[p95Index];
+      // For now simple incremental smoothing (light EMA) until full controller integration
+      const prev = this.metrics.smoothedP95DispatchLatencyMs || sorted[p95Index];
+      const alpha = 0.2; // moderate smoothing
+      this.metrics.smoothedP95DispatchLatencyMs = prev + alpha * (this.metrics.p95DispatchLatencyMs - prev);
+    } else {
+      this.metrics.p50DispatchLatencyMs = 0;
+      this.metrics.p95DispatchLatencyMs = 0;
+      this.metrics.smoothedP95DispatchLatencyMs = 0;
+    }
+  }
+
+  /** Public snapshot accessor (frozen copy) */
+  getFlushMetrics(): PerfFlushMetrics {
+    const m = this.metrics;
+    const snapshot: PerfFlushMetrics = Object.freeze({
+      totalFlushAttempts: m.totalFlushAttempts,
+      successfulFlushes: m.successfulFlushes,
+      rejectedFlushes: m.rejectedFlushes,
+      totalBatchesDispatched: m.totalBatchesDispatched,
+      totalEventsDispatched: m.totalEventsDispatched,
+      lastFlushDurationMs: m.lastFlushDurationMs,
+      avgEventsPerBatch: m.avgEventsPerBatch,
+      p50DispatchLatencyMs: m.p50DispatchLatencyMs,
+      p95DispatchLatencyMs: m.p95DispatchLatencyMs,
+      smoothedP95DispatchLatencyMs: m.smoothedP95DispatchLatencyMs,
+      histogramBuckets: m.histogram.map(b => ({ upperBoundMs: b.upperBoundMs, count: b.count })),
+      rejectionRate: m.rejectionRate,
+      lastEffectiveBatchSize: m.lastEffectiveBatchSize,
+      lastUpdated: m.lastUpdated,
+      adaptiveEnabled: !this.config.disableAdaptiveBatch,
+      backoffActive: performance.now() < this.nextAllowedFlushTime,
+      consecutiveRejects: this.consecutiveRejects
+    });
+    return snapshot;
+  }
+
+  /** @internal Debug accessor for tests (not part of public API surface) */
+  // eslint-disable-next-line @typescript-eslint/naming-convention
+  __getInternalPerfDebug(): { consecutiveRejects: number; backoffDelayMs: number; nextAllowedFlushTime: number; lastEffectiveBatchSize: number } {
+    return {
+      consecutiveRejects: this.consecutiveRejects,
+      backoffDelayMs: this.backoffDelayMs,
+      nextAllowedFlushTime: this.nextAllowedFlushTime,
+      lastEffectiveBatchSize: this.metrics.lastEffectiveBatchSize
+    };
+  }
+
+  /** @internal Inject a synthetic dispatch latency sample (test helper) */
+  // eslint-disable-next-line @typescript-eslint/naming-convention
+  __injectLatencySample(latencyMs: number): void {
+    if (latencyMs < 0) return;
+    const samples = this.metrics.dispatchLatencies;
+    samples.push(latencyMs);
+    if (samples.length > PerfReporter.MAX_LATENCY_SAMPLES) {
+      samples.splice(0, samples.length - PerfReporter.MAX_LATENCY_SAMPLES);
+    }
+    for (const bucket of this.metrics.histogram) {
+      if (latencyMs <= bucket.upperBoundMs) { bucket.count++; break; }
+    }
+    this.recomputeDerivedMetrics();
   }
 }
 

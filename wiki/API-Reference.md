@@ -1112,3 +1112,13 @@ import { attachQuantumFeatures, FeatureFlags, Phase } from 'qnce-engine';
 const q = attachQuantumFeatures(engine, new FeatureFlags({ 'quantum.phases': true }));
 q.isPhaseActive(new Phase('alpha', ({ flags }) => !!flags.unlockAlpha));
 ```
+
+### Measurement
+
+```ts
+class Measurement {
+  constructor(name: string, sampler?: (ctx: { flags: Record<string, unknown>; nodeId?: string }) => boolean | number);
+  sample(ctx?: { flags: Record<string, unknown>; nodeId?: string }): boolean; // number sampler treated as probability [0,1]
+  getStats(): { trials: number; successes: number; rate: number };
+}
+```

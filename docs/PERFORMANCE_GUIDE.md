@@ -174,6 +174,69 @@ console.log(`Avg hot-reload time: ${summary.hotReloadPerformance.avgTime}ms`);
 perf.clear();
 ```
 
+### 🧠 Adaptive Flush & Dynamic Batch Sizing (R2/R6 - Beta)
+
+The flushing subsystem now adapts batch sizes and schedules retries to balance latency and throughput.
+
+Core Features:
+
+| Component | Role | Heuristic | Status |
+|-----------|------|-----------|--------|
+| Backoff (R2) | Gate flush attempts after rejection | 20ms * 2^streak (cap 500ms) | Stable |
+| Dynamic Batch (R6) | Scale batch size with backlog & latency | Upscale tiers (<25ms / <50ms p95); shrink on streak ≥2 | Beta |
+| Rejection Rate | Quick saturation signal | rejected / (accepted + rejected) | Beta |
+| Effective Batch Size | Observability | `lastEffectiveBatchSize` | Beta |
+| Disable Adaptive Batch Flag | Deterministic baseline / diagnostics | `disableAdaptiveBatch` or env `QNCE_DISABLE_ADAPTIVE_BATCH=1` | Beta |
+| Adaptive Enabled Flag | Indicates if dynamic sizing heuristics active | `adaptiveEnabled` snapshot boolean | Beta |
+
+Metrics Additions:
+```ts
+interface PerfFlushMetrics {
+  rejectionRate: number;
+  lastEffectiveBatchSize: number;
+  adaptiveEnabled: boolean; // true when dynamic sizing active
+}
+```
+
+Sizing Pseudocode:
+```ts
+if (consecutiveRejects >= 2) {
+  effective = clamp(min=10, base / min(streak,4));
+} else if (backlog > base*4 && p95 < 50) {
+  effective = min(base*4, backlog/4);
+} else if (backlog > base*2 && p95 < 25) {
+  effective = min(base*3, backlog/3);
+}
+```
+
+Usage Example:
+```ts
+import { getPerfReporter } from 'qnce-engine/performance';
+const r = getPerfReporter();
+const metrics = r.getFlushMetrics();
+console.log(metrics.rejectionRate, metrics.lastEffectiveBatchSize, metrics.adaptiveEnabled);
+// Fixed sizing example
+// const fixed = getPerfReporter({ batchSize: 80, disableAdaptiveBatch: true });
+// metrics.adaptiveEnabled will be false when adaptive sizing disabled.
+```
+
+Suppress noisy warnings in CI:
+```bash
+export QNCE_SUPPRESS_PERF_WARN=1
+```
+
+Internal (not stable):
+```ts
+// @ts-expect-error internal accessor
+console.log(r.__getInternalPerfDebug());
+```
+
+Beta Notes:
+- Thresholds may adjust based on field feedback
+- Consider metrics observational; avoid hard SLAs yet
+- Share traces (backlog, p95, rejectionRate) for tuning suggestions
+
+
 **Performance Events:**
 
 - `flow-start` / `flow-complete` - Narrative transitions
