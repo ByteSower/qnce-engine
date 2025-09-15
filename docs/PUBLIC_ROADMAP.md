@@ -21,6 +21,8 @@ This roadmap summarizes high-level, non-sensitive milestones. Details of interna
 - Pluggable analytics / ML-driven branch quality hints
 - Collaborative multi-user narrative session primitives
 
+> Security Enhancements: Future security & compliance initiatives are tracked privately. Only shipped, public-safe items will appear in release notes and the security policy. This keeps the public roadmap focused on functional & performance milestones.
+
 ## Stability Tags
 - `@public`: Stable surface, semantic versioning applies.
 - `@beta`: Subject to refinement, backward compatible in minors where feasible.
