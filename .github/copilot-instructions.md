@@ -131,3 +131,29 @@ Review PRs with focus on backward compatibility, docs updates, and test coverage
 Keep discussions in GitHub Discussions or your chosen forum to preserve context.
 
 Hold biweekly syncs to roadmap upcoming sprints and prioritize feedback.
+
+---
+
+## 8. Security & Privacy Practices
+
+Guidance for assistants and contributors to maintain our current security posture while avoiding leaks:
+
+- Public roadmap (docs/PUBLIC_ROADMAP.md) MUST NOT include forward-looking security tasks. Track security backlog privately in `docs/SECURITY_ROADMAP.local.md` (ignored by Git).
+- Before merging, run the sensitive artifact guard:
+  - `npm run check:sensitive`
+- Do not reintroduce internal planning artifacts. Sanitized placeholders are allowed, but new content must remain private.
+- SECURITY policy changes belong in `SECURITY.md` only when controls are active and safe to disclose (scope/definitions allowed).
+- Prefer outcome-based phrasing in public surfaces (CHANGELOG/Release Notes); avoid tool names or attack surface details when not necessary.
+- No default external telemetry. Any remote export must be explicitly opt-in and avoid PII.
+
+### Security Checklist (per PR)
+- [ ] Run `npm run check:sensitive` (must pass)
+- [ ] No forward-looking security tasks added to public docs
+- [ ] Public changes contain no internal sprint/charter details
+- [ ] If a new control is shipped, update SECURITY.md minimally (scope, commands) and CHANGELOG
+
+### Useful Commands
+- Sensitive scan: `npm run check:sensitive`
+- API report: `npm run dx:api-report`
+- Tests: `npm test`
+- Typecheck: `npm run typecheck`
