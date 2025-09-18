@@ -11,6 +11,25 @@
 
 > New: Lightweight, privacy-safe telemetry (opt-in). CLI now supports `--telemetry` and `--telemetry-report`, with p50/p95 batch send latency. See the wiki: [Analytics & Telemetry](https://github.com/ByteSower/qnce-engine/blob/main/wiki/Analytics-and-Telemetry.md).
 
+## TL;DR Quickstart
+
+```bash
+# Install
+npm install qnce-engine
+
+# Play the demo story (from this repo)
+node examples/quickstart-demo.js
+
+# Live performance monitor (global CLI)
+npm install -g qnce-engine
+qnce-perf dashboard
+qnce-perf stream 1000 | jq '.'   # NDJSON streaming (optional)
+```
+
+New to coding? Start here:
+- Beginner Guide (no code): wiki/Beginner-Guide.md
+- Getting Started: wiki/Getting-Started.md
+
 ## Documentation & Guides
 
 - Getting Started (wiki)
@@ -32,7 +51,7 @@ High-level, non-sensitive roadmap: [`docs/PUBLIC_ROADMAP.md`](./docs/PUBLIC_ROAD
 - **Collapse:** Player choices "collapse" the narrative to a specific path, updating state and flags
 - **Entanglement:** Early decisions affect later outcomes, enabling complex, interconnected stories
 
-New to coding? See the no-code [Beginner Guide](https://github.com/ByteSower/qnce-engine/blob/main/wiki/Beginner-Guide.md) to create and play a story from the terminal.
+New to coding? See the no-code [Beginner Guide](wiki/Beginner-Guide.md) to create and play a story from the terminal.
 
 ## ✨ Current Features (v1.3.0)
 
@@ -264,6 +283,9 @@ qnce-perf live 1000
 
 # Export performance data
 qnce-perf export > performance-report.json
+
+# Stream NDJSON (metrics+thread stats per line)
+qnce-perf stream 1000 | jq '.'
 ```
 
 **[📚 Complete Performance Guide →](docs/PERFORMANCE.md)**

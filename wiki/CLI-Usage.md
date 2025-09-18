@@ -400,6 +400,27 @@ qnce-perf monitor story.json
 
 # Generate performance report
 qnce-perf report --output performance-report.json
+
+# Stream NDJSON (metrics per line)
+qnce-perf stream 1000 | jq '.'
+
+# Export JSON including flush metrics
+qnce-perf export > perf.json
+# perf.json excerpt
+# {
+#   "timestamp": "...",
+#   "performanceSummary": { /* ... */ },
+#   "flushMetrics": {
+#     "p95DispatchLatencyMs": 12.3,
+#     "smoothedP95DispatchLatencyMs": 10.8,
+#     "rejectionRate": 0.0,
+#     "backoffActive": false,
+#     "consecutiveRejects": 0,
+#     "backoffDelayMs": 0,
+#     "rejectedFlushesSinceLastSuccess": 0
+#   },
+#   "threadPoolStats": { /* ... */ }
+# }
 ```
 
 ### Command Options

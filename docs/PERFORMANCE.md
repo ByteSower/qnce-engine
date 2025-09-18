@@ -193,6 +193,12 @@ qnce-perf live 1000  # Update every 1000ms
 qnce-perf export > performance-report.json
 ```
 
+#### NDJSON Streaming
+```bash
+# One JSON object per line with { summary, flush, thread }
+qnce-perf stream 1000 | jq '.'
+```
+
 #### Reset Counters
 ```bash
 qnce-perf reset
@@ -595,6 +601,8 @@ interface PerfFlushMetrics {
   backoffActive?: boolean;      // true if inside current backoff window
   consecutiveRejects?: number;  // current rejection streak count
   smoothedP95DispatchLatencyMs?: number; // EMA-smoothed p95 latency
+  backoffDelayMs?: number;      // current backoff duration (ms)
+  rejectedFlushesSinceLastSuccess?: number; // rolling failures since last success
 }
 ```
 
@@ -634,6 +642,12 @@ Save/load/checkpoint tests now assert <10ms (previous <2ms proved brittle after 
 | `QNCE_SUPPRESS_PERF_WARN` | Suppress console warnings for rejected flushes | Off |
 | `QNCE_DISABLE_ADAPTIVE_BATCH` | Force fixed batch size (disable dynamic sizing) | Off |
 | `QNCE_ADAPTIVE_SAMPLING` | Enable beta sampling scaffold | Off |
+
+Config controls (code):
+```ts
+// Adjust smoothing strength for smoothed p95 (0.01..1.0)
+getPerfReporter({ smoothingAlpha: 0.3 });
+```
 
 ### 8. Planned Follow-Ups
 * Configurable smoothing alpha & decay windows

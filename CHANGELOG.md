@@ -8,7 +8,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 **📌 Current Version: [1.4.0] - 2025-09-14**
 
 ## [Unreleased]
-_Nothing yet._
+### Added ✨
+- perf: configurable EMA smoothing via `smoothingAlpha` in `PerfReporterConfig` (@beta)
+- perf: richer flush metrics snapshot: `rejectedFlushesSinceLastSuccess`, `backoffDelayMs` (@beta)
+- cli(perf): `stream` command outputs NDJSON lines with `summary`, `flush`, and thread pool stats; `export` now includes `flushMetrics`
+
+### Changed 🔧
+- api: updated public API report and annotated `PerfFlushMetrics`/`getPerfReporter` with release tags (@beta)
 
 ## [1.4.0] - 2025-09-14
 ### Performance
