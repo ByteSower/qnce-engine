@@ -38,16 +38,22 @@ export interface PerfReporterConfig {
   maxEventHistory: number;
   enableConsoleOutput: boolean;
   disableAdaptiveBatch?: boolean; // If true, skip dynamic batch sizing (use fixed batchSize)
+  // @beta configurable smoothing for p95 EMA
+  smoothingAlpha?: number; // 0<alpha<=1. Default 0.2
 }
 
 /**
  * Flush metrics snapshot returned by getPerfFlushMetrics().
  * Designed to be immutable from consumer perspective (frozen object returned).
  */
+/**
+ * @beta
+ */
 export interface PerfFlushMetrics {
   totalFlushAttempts: number;        // All flush() calls (manual + timer + auto batch)
   successfulFlushes: number;         // flush() calls where at least one batch was handed to thread pool
   rejectedFlushes: number;           // writeTelemetry promise rejected (queue limit, etc.)
+  rejectedFlushesSinceLastSuccess?: number; // @beta rejections since last success
   totalBatchesDispatched: number;    // Number of writeTelemetry calls attempted
   totalEventsDispatched: number;     // Sum of events length across dispatched batches (not including retained history)
   lastFlushDurationMs: number;       // Duration in ms of the most recent flush dispatch loop
@@ -62,6 +68,7 @@ export interface PerfFlushMetrics {
   adaptiveEnabled: boolean;          // true if dynamic batch sizing heuristics are active
   backoffActive?: boolean;           // @beta indicates flush currently under backoff gate
   consecutiveRejects?: number;       // @beta current rejection streak
+  backoffDelayMs?: number;           // @beta current backoff window
 }
 
 /**
@@ -85,6 +92,7 @@ export class PerfReporter {
     totalFlushAttempts: 0,
     successfulFlushes: 0,
     rejectedFlushes: 0,
+    rejectedFlushesSinceLastSuccess: 0,
     totalBatchesDispatched: 0,
     totalEventsDispatched: 0,
     lastFlushDurationMs: 0,
@@ -110,7 +118,8 @@ export class PerfReporter {
       enableBackgroundFlush: config.enableBackgroundFlush !== false,
       maxEventHistory: config.maxEventHistory || 1000,
       enableConsoleOutput: config.enableConsoleOutput || false,
-      disableAdaptiveBatch: config.disableAdaptiveBatch ?? (typeof process !== 'undefined' && !!process.env.QNCE_DISABLE_ADAPTIVE_BATCH)
+      disableAdaptiveBatch: config.disableAdaptiveBatch ?? (typeof process !== 'undefined' && !!process.env.QNCE_DISABLE_ADAPTIVE_BATCH),
+      smoothingAlpha: config.smoothingAlpha ?? 0.2
     };
 
     this.startTime = performance.now();
@@ -529,11 +538,14 @@ export class PerfReporter {
       if (latencyMs <= bucket.upperBoundMs) { bucket.count++; break; }
     }
     this.metrics.successfulFlushes = Math.max(this.metrics.successfulFlushes, 1);
+    // reset rolling rejection counter
+    this.metrics.rejectedFlushesSinceLastSuccess = 0;
   }
 
   /** Internal: record dispatch failure */
   private recordDispatchFailure(err: unknown): void {
     this.metrics.rejectedFlushes++;
+    this.metrics.rejectedFlushesSinceLastSuccess++;
     // R2: update adaptive backoff streak + compute new delay (exponential, capped)
     this.consecutiveRejects++;
     const exponent = Math.min(this.consecutiveRejects - 1, 5); // cap growth
@@ -563,7 +575,7 @@ export class PerfReporter {
       this.metrics.p95DispatchLatencyMs = sorted[p95Index];
       // For now simple incremental smoothing (light EMA) until full controller integration
       const prev = this.metrics.smoothedP95DispatchLatencyMs || sorted[p95Index];
-      const alpha = 0.2; // moderate smoothing
+      const alpha = Math.min(1, Math.max(0.01, this.config.smoothingAlpha ?? 0.2)); // clamp
       this.metrics.smoothedP95DispatchLatencyMs = prev + alpha * (this.metrics.p95DispatchLatencyMs - prev);
     } else {
       this.metrics.p50DispatchLatencyMs = 0;
@@ -579,6 +591,7 @@ export class PerfReporter {
       totalFlushAttempts: m.totalFlushAttempts,
       successfulFlushes: m.successfulFlushes,
       rejectedFlushes: m.rejectedFlushes,
+      rejectedFlushesSinceLastSuccess: m.rejectedFlushesSinceLastSuccess,
       totalBatchesDispatched: m.totalBatchesDispatched,
       totalEventsDispatched: m.totalEventsDispatched,
       lastFlushDurationMs: m.lastFlushDurationMs,
@@ -592,7 +605,8 @@ export class PerfReporter {
       lastUpdated: m.lastUpdated,
       adaptiveEnabled: !this.config.disableAdaptiveBatch,
       backoffActive: performance.now() < this.nextAllowedFlushTime,
-      consecutiveRejects: this.consecutiveRejects
+      consecutiveRejects: this.consecutiveRejects,
+      backoffDelayMs: this.backoffDelayMs
     });
     return snapshot;
   }
@@ -627,6 +641,9 @@ export class PerfReporter {
 // Singleton instance for global access
 let globalPerfReporter: PerfReporter | null = null;
 
+/**
+ * @beta
+ */
 export function getPerfReporter(config?: Partial<PerfReporterConfig>): PerfReporter {
   if (!globalPerfReporter) {
     globalPerfReporter = new PerfReporter(config);

@@ -7,9 +7,9 @@ This roadmap summarizes high-level, non-sensitive milestones. Details of interna
 - v1.3.x: Story import CLI, persistence adapters, performance infrastructure foundations.
 
 ## Near-Term (1.4.x)
-- Adaptive tuning refinements (configurable smoothing, retry metrics, sampling evolution)
+- Adaptive tuning refinements (configurable smoothing, retry metrics, sampling evolution) — in progress
 - Quantum primitives hardening (performance profiling, API stability review)
-- Enhanced telemetry export formatting & streaming modes
+- Enhanced telemetry export formatting & streaming modes — in progress
 
 ## Mid-Term (1.5.x)
 - Quantum feature stabilization and promotion to beta/stable tiers
@@ -31,4 +31,4 @@ This roadmap summarizes high-level, non-sensitive milestones. Details of interna
 ## Feedback
 Please open GitHub Issues or Discussions for feature requests and ideas.
 
-*Last Updated: 2025-09-15*
+*Last Updated: 2025-09-18*

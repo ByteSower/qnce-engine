@@ -193,16 +193,39 @@ function startLiveMonitor(intervalMs = 2000, thresholds: PerformanceThresholds =
  */
 function exportSummary(): void {
   const summary = perf.summary();
+  const flushMetrics = getPerfReporter().getFlushMetrics?.();
   const threadStats = getThreadPool().getStats();
   
   const report = {
     timestamp: new Date().toISOString(),
     performanceSummary: summary,
+    flushMetrics,
     threadPoolStats: threadStats,
     thresholds: DEFAULT_THRESHOLDS
   };
 
   console.log(JSON.stringify(report, null, 2));
+}
+
+/**
+ * Stream NDJSON metrics to stdout at an interval
+ */
+function streamNdjson(intervalMs = 1000): void {
+  const rep = getPerfReporter();
+  const tick = () => {
+    const payload = {
+      ts: Date.now(),
+      summary: perf.summary(),
+      flush: rep.getFlushMetrics?.(),
+      thread: getThreadPool().getStats()
+    };
+    // NDJSON line
+    process.stdout.write(`${JSON.stringify(payload)}\n`);
+  };
+  tick();
+  const timer = setInterval(tick, intervalMs);
+  if (typeof timer.unref === 'function') timer.unref();
+  process.on('SIGINT', () => { clearInterval(timer); process.exit(0); });
 }
 
 /**
@@ -237,6 +260,13 @@ function main(): void {
     case 'json':
       exportSummary();
       break;
+    
+    case 'stream': {
+      // qnce-perf stream 500  -> 500ms
+      const interval = parseInt(args[1]) || 1000;
+      streamNdjson(interval);
+      break;
+    }
       
     case 'reset':
     case 'clear':
