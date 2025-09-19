@@ -1,8 +1,9 @@
 # Getting Started with QNCE Engine
 
-Welcome to QNCE Engine! This guide will help you get up and running with creating interactive narratives using quantum-inspired mechanics.
+Welcome! This guide walks you from zero to a running story in minutes. Pick your path:
 
-If you prefer a no-code path, start with the [Beginner Guide](Beginner-Guide).
+- No code: Start with the [Beginner Guide](Beginner-Guide) to create and play a story from the terminal.
+- Light code: Follow this page for a tiny script or use the CLI-only flow below.
 
 ## 📦 Installation
 
@@ -32,7 +33,7 @@ qnce-init --version
 
 ## 🏁 Quick Start (5 Minutes)
 
-Let's create your first interactive story in just a few steps!
+Let’s build and run a tiny story, two ways: (A) Code file, (B) CLI-only.
 
 ### Step 1: Create a New Project
 
@@ -47,7 +48,7 @@ cd my-first-story
 npm install
 ```
 
-### Step 2: Your First Story
+### Step 2A: Your First Story (Code File)
 
 Create a simple story file:
 
@@ -144,7 +145,7 @@ if (engine.getAvailableChoices().length > 0) {
 }
 ```
 
-### Step 3: Run Your Story
+### Step 3A: Run Your Story
 
 ```bash
 node story.js
@@ -170,6 +171,33 @@ Flags: { courage: 1 }
 
 Choices:
 1. Drink from the brook
+```
+
+### Step 2B: CLI-Only Path (No Code)
+
+Create a JSON file and play it in the terminal:
+
+```bash
+cat > my-story.json <<'JSON'
+{
+  "initialNodeId": "start",
+  "nodes": [
+    { "id": "start", "text": "You wake up in a cozy cottage.", "choices": [
+      { "text": "Make tea", "nextNodeId": "tea" },
+      { "text": "Go outside", "nextNodeId": "outside" }
+    ]},
+    { "id": "tea", "text": "The tea warms your spirit.", "choices": [] },
+    { "id": "outside", "text": "The morning sun greets you.", "choices": [] }
+  ]
+}
+JSON
+
+# Play it
+qnce-play my-story.json
+
+# Save and load (optional)
+qnce-play my-story.json --storage memory --non-interactive --save-key slot1
+qnce-play my-story.json --storage memory --load-key slot1
 ```
 
 ## 🎯 Core Concepts in Action
@@ -206,6 +234,12 @@ if (engine.getFlags().courage > 0) {
 ```
 
 ## 🚀 Framework Integration
+
+Quick monitor while developing:
+```bash
+qnce-perf dashboard
+qnce-perf stream 1000 | jq '.'
+```
 
 ### React Integration
 
