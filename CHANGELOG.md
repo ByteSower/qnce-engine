@@ -5,9 +5,13 @@ All notable changes to the QNCE Engine will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-**📌 Current Version: [1.4.0] - 2025-09-14**
+
+**📌 Current Version: [1.4.1] - 2026-02-25**
+
 
 ## [Unreleased]
+
+## [1.4.1] - 2026-02-25
 ### Added ✨
 - perf: configurable EMA smoothing via `smoothingAlpha` in `PerfReporterConfig` (@beta)
 - perf: richer flush metrics snapshot: `rejectedFlushesSinceLastSuccess`, `backoffDelayMs` (@beta)
