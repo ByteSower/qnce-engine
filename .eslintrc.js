@@ -15,7 +15,9 @@ module.exports = {
         '@typescript-eslint/no-inferrable-types': 'error',
         'no-console': 'warn',
         'prefer-const': 'error',
-        'no-var': 'error'
+        'no-var': 'error',
+        'no-eval': 'error',
+        'no-new-func': 'error'
       }
     },
     {

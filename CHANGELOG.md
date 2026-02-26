@@ -8,6 +8,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 **📌 Current Version: [1.3.2] - 2025-08-26**
 
 ## [Unreleased]
+
+### Security 🔒
+- **Safe condition evaluator**: Replaced `new Function` dynamic code execution in `src/engine/condition.ts` with a whitelist-only recursive-descent parser/evaluator. Only `flags.<name>`, `state.<name>`, `customData.<name>`, `timestamp`, comparison/logical/arithmetic operators, parentheses, and primitive literals are accepted. Unknown identifiers are rejected at parse time, eliminating the code-injection surface.
+- **Updated SECURITY.md** with an explicit note describing the safe expression evaluation policy and whitelisted grammar.
+
+### Tooling 🛠️
+- **ESLint**: Added `no-eval` and `no-new-func` rules (both as errors) to `.eslintrc.js` to enforce the ban on dynamic code execution at source level. Lint is now a blocking CI step.
+- **CI dist scan**: Added a build step in `ci.yml` that fails the workflow if `eval(` or `new Function` appears in the compiled `dist/` output after every build.
+- **Workflow hardening** (`performance-regression.yml`): publish job now requires `github.ref_type == 'tag'` in addition to `startsWith(github.ref, 'refs/tags/v')`, adds least-privilege `permissions` block (`contents: read`, `id-token: write`), and removes the `--tag sprint2` dist-tag (defaults to `latest`).
+- **Removed empty workflow** `.github/workflows/ci-cd.yml` (file contained no jobs).
+- **`package.json#files`**: Removed `scripts/perf-conditions.ts` development source file from the npm publish list.
+
 ### Performance
  - Added condition evaluator expression canonicalization (sanitized + interned) with LRU cache.
  - Enabled context object pooling for condition evaluation in performance mode (reduces allocation churn during heavy conditional choice filtering).

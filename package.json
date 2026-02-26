@@ -90,7 +90,6 @@
     "LICENSE",
     "examples/**/*",
     "docs/branching/**/*",
-  "scripts/perf-conditions.ts",
     "docs/PERFORMANCE.md"
   ]
 }

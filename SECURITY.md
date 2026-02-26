@@ -110,6 +110,7 @@ if (!result.success) {
 2. **State Integrity**: Serialized states include checksums for integrity verification
 3. **Type Safety**: TypeScript provides compile-time type checking
 4. **Dependency Security**: Regular dependency audits (npm audit shows 0 vulnerabilities)
+5. **Safe Condition Evaluation**: Condition expressions are parsed by a whitelist-only recursive-descent parser; `eval` and `new Function` are not used in any runtime code path. Only the following constructs are accepted: `flags.<name>`, `state.<name>`, `customData.<name>`, `timestamp`, comparison operators, logical operators (`&&`, `||`, `!`), arithmetic operators, parentheses, and literals (`true`, `false`, `null`, `undefined`, numbers, strings). Any other identifier or construct is rejected with an error.
 
 ### Areas of Focus
 
