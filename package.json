@@ -1,43 +1,43 @@
 {
   "name": "qnce-engine",
-  "version": "1.4.0",
+  "version": "1.4.1",
   "description": "Core QNCE (Quantum Narrative Convergence Engine) - Framework agnostic narrative engine with performance optimization",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "bin": {
-  "qnce-audit": "dist/cli/audit.js",
-  "qnce-init": "dist/cli/init.js",
-  "qnce-perf": "dist/cli/perf.js",
-  "qnce-play": "dist/cli/play.js",
-  "qnce-import": "dist/cli/import.js"
+    "qnce-audit": "dist/cli/audit.js",
+    "qnce-init": "dist/cli/init.js",
+    "qnce-perf": "dist/cli/perf.js",
+    "qnce-play": "dist/cli/play.js",
+    "qnce-import": "dist/cli/import.js"
   },
   "scripts": {
     "build": "tsc",
-  "typecheck": "tsc --noEmit",
+    "typecheck": "tsc --noEmit",
     "build:watch": "tsc --watch",
     "build:examples": "tsc --outDir dist/examples --target ES2022 --module CommonJS --moduleResolution Node --strict --esModuleInterop --skipLibCheck --declaration false examples/persistence-demo.ts examples/autosave-undo-demo.ts",
     "lint": "eslint .",
-  "test": "jest",
-  "test:watch": "jest --watch",
-  "test:coverage": "jest --coverage",
-  "test:performance": "node scripts/performance-tests.js",
-  "demo:performance": "npm run build && node scripts/performance-demo.js",
-  "demo:quickstart": "npm run build && node examples/quickstart-demo.js",
-  "demo:persistence": "npm run build:examples && node dist/examples/examples/persistence-demo.js",
-  "demo:autosave": "npm run build:examples && node dist/examples/examples/autosave-undo-demo.js",
-  "demo:fluent": "npx -y ts-node --compiler-options '{\"module\":\"commonjs\"}' examples/fluent-builder-prototype.ts",
-  "perf:micro": "ts-node scripts/perf-micro.ts",
-  "perf:init-load": "ts-node scripts/benchmark-init-load.ts",
-  "perf:conditions": "ts-node scripts/perf-conditions.ts",
-  "dx:api-report": "npm run build && api-extractor run --local --verbose",
-  "dx:api-warnings": "npm run build && api-extractor run --local --verbose | grep -i 'ae-' || true",
-  "docs:typedoc": "typedoc",
-  "prepublishOnly": "npm run build && npm run test",
-  "dx:api-inventory": "node scripts/api-inventory.mjs"
-  , "docs:sync": "ts-node scripts/sync-docs.ts"
-  , "docs:perf-snapshot": "ts-node scripts/update-performance-doc.ts"
-  , "check:sensitive": "node scripts/check-sensitive-files.mjs"
-  , "audit:licenses": "node scripts/license-audit.mjs"
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "test:coverage": "jest --coverage",
+    "test:performance": "node scripts/performance-tests.js",
+    "demo:performance": "npm run build && node scripts/performance-demo.js",
+    "demo:quickstart": "npm run build && node examples/quickstart-demo.js",
+    "demo:persistence": "npm run build:examples && node dist/examples/examples/persistence-demo.js",
+    "demo:autosave": "npm run build:examples && node dist/examples/examples/autosave-undo-demo.js",
+    "demo:fluent": "npx -y ts-node --compiler-options '{\"module\":\"commonjs\"}' examples/fluent-builder-prototype.ts",
+    "perf:micro": "ts-node scripts/perf-micro.ts",
+    "perf:init-load": "ts-node scripts/benchmark-init-load.ts",
+    "perf:conditions": "ts-node scripts/perf-conditions.ts",
+    "dx:api-report": "npm run build && api-extractor run --local --verbose",
+    "dx:api-warnings": "npm run build && api-extractor run --local --verbose | grep -i 'ae-' || true",
+    "docs:typedoc": "typedoc",
+    "prepublishOnly": "npm run build && npm run test",
+    "dx:api-inventory": "node scripts/api-inventory.mjs",
+    "docs:sync": "ts-node scripts/sync-docs.ts",
+    "docs:perf-snapshot": "ts-node scripts/update-performance-doc.ts",
+    "check:sensitive": "node scripts/check-sensitive-files.mjs",
+    "audit:licenses": "node scripts/license-audit.mjs"
   },
   "keywords": [
     "narrative",
@@ -75,10 +75,10 @@
     "react": "^18.0.0",
     "react-dom": "^18.3.1",
     "ts-jest": "^29.4.0",
-  "typescript": "~5.6.0",
-  "@microsoft/api-extractor": "^7.47.0",
-  "typedoc": "^0.26.10",
-  "ts-node": "^10.9.2"
+    "typescript": "~5.6.0",
+    "@microsoft/api-extractor": "^7.47.0",
+    "typedoc": "^0.26.10",
+    "ts-node": "^10.9.2"
   },
   "dependencies": {
     "ajv": "^8.12.0"
