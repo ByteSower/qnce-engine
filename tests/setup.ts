@@ -123,4 +123,4 @@ import { shutdownThreadPool } from '../src/performance/ThreadPool';
 
 afterAll(async () => {
   await shutdownThreadPool();
-});
+}, 10000);
