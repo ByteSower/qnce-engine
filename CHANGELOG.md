@@ -19,6 +19,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Tests 🧪
 - Made the `AutosaveIndicator` timestamp assertion environment-independent so validation remains stable after dependency refreshes.
+- Increased the shared Jest teardown timeout for thread-pool cleanup to keep the full suite stable during dependency maintenance validation.
 
 ## [1.4.1] - 2026-02-25
 ### Added ✨
