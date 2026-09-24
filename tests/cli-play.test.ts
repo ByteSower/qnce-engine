@@ -11,7 +11,9 @@ function runCli(args: string[]) {
 describe('qnce-play CLI --storage', () => {
   beforeAll(() => {
     // Ensure dist is up to date with latest CLI changes
-    const build = spawnSync('npm', ['run', 'build'], { encoding: 'utf-8' });
+    // shell: true is required because npm is a .cmd/.bat wrapper on Windows and cannot be
+    // launched directly via CreateProcess; args here are static literals, not untrusted input
+    const build = spawnSync('npm', ['run', 'build'], { encoding: 'utf-8', shell: true });
     if (build.status !== 0) {
       throw new Error(`Build failed: ${build.stderr || build.stdout}`);
     }
