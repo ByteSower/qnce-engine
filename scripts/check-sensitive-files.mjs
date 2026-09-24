@@ -71,7 +71,8 @@ function walk(dir, root, results = []) {
       if (IGNORE_DIRS.has(entry)) continue;
       walk(full, root, results);
     } else {
-      results.push({ path: rel });
+      // Normalize to forward slashes so comparisons below work on Windows too
+      results.push({ path: rel.replace(/\\/g, '/') });
     }
   }
   return results;

@@ -6,16 +6,19 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
-**📌 Current Version: [1.4.1] - 2026-02-25**
-
+**📌 Current Version: [1.4.2] - 2026-09-23**
 
 ## [Unreleased]
+
+## [1.4.2] - 2026-09-23
 
 ### Security 🔒
 - Refreshed the npm lockfile with `npm audit fix`, updating vulnerable transitive packages and clearing the current audit report to zero known vulnerabilities.
 
 ### Tooling 🛠️
 - Synchronized `package-lock.json` with package version `1.4.2` and the latest dependency resolutions allowed by the existing semver ranges.
+- Fixed `scripts/check-sensitive-files.mjs` incorrectly flagging sanitized placeholder docs and its own denylist string on Windows due to backslash path separators.
+- Added the `etc/` output directory required by `npm run dx:api-report` (API Extractor).
 
 ### Tests 🧪
 - Made the `AutosaveIndicator` timestamp assertion environment-independent so validation remains stable after dependency refreshes.
