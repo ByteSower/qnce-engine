@@ -122,15 +122,17 @@ describe('AutosaveIndicator', () => {
 
   describe('Timestamp Display', () => {
     it('shows timestamp when showTimestamp is true', () => {
+      const lastAutosave = new Date('2025-07-03T12:00:00Z');
       mockUseAutosave.mockReturnValue({
         ...mockAutosaveState,
-        lastAutosave: new Date('2025-07-03T12:00:00Z')
+        lastAutosave
       });
 
       render(<AutosaveIndicator engine={engine} variant="detailed" showTimestamp={true} />);
       
-      // Should show timestamp (time will be formatted by component)
-      expect(screen.getByText(/08:00/)).toBeInTheDocument();
+      expect(
+        screen.getByText(lastAutosave.toLocaleTimeString([], { hour12: false, timeStyle: 'short' }))
+      ).toBeInTheDocument();
     });
 
     it('hides timestamp when showTimestamp is false', () => {

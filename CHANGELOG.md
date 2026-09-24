@@ -17,6 +17,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Tooling 🛠️
 - Synchronized `package-lock.json` with package version `1.4.2` and the latest dependency resolutions allowed by the existing semver ranges.
 
+### Tests 🧪
+- Made the `AutosaveIndicator` timestamp assertion environment-independent so validation remains stable after dependency refreshes.
+
 ## [1.4.1] - 2026-02-25
 ### Added ✨
 - perf: configurable EMA smoothing via `smoothingAlpha` in `PerfReporterConfig` (@beta)
